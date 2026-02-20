@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Match Maestro",
+    "slug": "matchmaestro",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "buildNumber": "4",
+      "bundleIdentifier": "com.steveomatic.matchmaestro",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          }
+        ],
+        "UIBackgroundModes": []
+      },
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-7368779159802085~5957773720"
+      }
+    },
+    "android": {
+      "package": "com.steveomatic.matchmaestro",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/splash-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [],
+      "edgeToEdgeEnabled": true,
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-7368779159802085~3571283536"
+      }
+    },
+    "web": {
+      "favicon": "./assets/splash-icon.png"
+    },
+    "owner": "armyrunne9916",
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7368779159802085~3571283536",
+          "iosAppId": "ca-app-pub-7368779159802085~5957773720"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "94a77842-6d97-43ef-ac3b-50bf0723b0a5"
+      }
+    }
+  }
+}
