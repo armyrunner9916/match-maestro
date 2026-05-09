@@ -25,42 +25,56 @@ function SettingsModal({
               Card Back Color
             </Text>
             <View style={styles.swatchRow}>
-              {['black', 'red', 'green', 'blue', 'yellow', 'purple'].map(color => (
-                <TouchableOpacity
-                  key={color}
-                  style={{
-                    backgroundColor:
-                      color === 'black' ? '#000' :
-                      color === 'red' ? '#dc2626' :
-                      color === 'green' ? '#16a34a' :
-                      color === 'blue' ? '#2563eb' :
-                      color === 'yellow' ? '#eab308' : '#9333ea',
-                    width: 80,
-                    height: 40,
-                    margin: 5,
-                    borderRadius: 8,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: cardBackColor === color ? 3 : 0,
-                    borderColor: '#3b82f6',
-                  }}
-                  onPress={() => setCardBackColor(color)}
-                >
-                  <Text style={{ color: color === 'yellow' ? '#000' : '#fff' }}>{color}</Text>
-                </TouchableOpacity>
-              ))}
+              {['black', 'red', 'green', 'blue', 'yellow', 'purple'].map(color => {
+                const isSelected = cardBackColor === color;
+                return (
+                  <TouchableOpacity
+                    key={color}
+                    style={{
+                      backgroundColor:
+                        color === 'black' ? '#000' :
+                        color === 'red' ? '#dc2626' :
+                        color === 'green' ? '#16a34a' :
+                        color === 'blue' ? '#2563eb' :
+                        color === 'yellow' ? '#eab308' : '#9333ea',
+                      width: 80,
+                      height: 40,
+                      margin: 5,
+                      borderRadius: 8,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: isSelected ? 3 : 0,
+                      borderColor: '#3b82f6',
+                    }}
+                    onPress={() => setCardBackColor(color)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Card back color: ${color}`}
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <Text style={{ color: color === 'yellow' ? '#000' : '#fff' }}>{color}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           <TouchableOpacity
             style={[styles.hapticToggle, { backgroundColor: hapticEnabled ? '#10b981' : '#6b7280' }]}
             onPress={() => setHapticEnabled(!hapticEnabled)}
+            accessibilityRole="switch"
+            accessibilityLabel="Haptic feedback"
+            accessibilityState={{ checked: hapticEnabled }}
           >
             <Text style={styles.hapticLabel}>📳 Haptic Feedback</Text>
             <Text style={styles.hapticState}>{hapticEnabled ? 'ON' : 'OFF'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close settings"
+          >
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
         </View>

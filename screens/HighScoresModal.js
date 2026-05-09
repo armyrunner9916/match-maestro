@@ -36,7 +36,12 @@ function HighScoresModal({ visible, onClose, darkMode, highScores }) {
               ))
             )}
           </ScrollView>
-          <TouchableOpacity style={styles.button} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close high scores"
+          >
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
         </View>

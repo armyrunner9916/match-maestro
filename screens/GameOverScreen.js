@@ -7,13 +7,18 @@ import {
   StyleSheet,
 } from 'react-native';
 
-// Phase 8 will redesign this as a <GlassCard> with: per-mode-aware Game Over /
-// Easy-completion variants, "🎉 New high score!" callout, share button (Normal/
-// Hard/Challenge only), Play Again primary, Back to Menu tertiary.
+// Interim 3-button layout. Phase 8 will redesign this as a <GlassCard> with:
+// per-mode-aware Game Over / Easy-completion variants, "🎉 New high score!"
+// callout, share button (Normal/Hard/Challenge only), and Phase 6.4's
+// "Reached Level X (Y/Z pairs matched)" detail.
+//
+// For now: New Game (restarts same mode), Main Menu (back to mode select),
+// High Scores. Same .button style, distinct semantic colors.
 function GameOverScreen({
   darkMode,
   completedLevel,
   onNewGame,
+  onMainMenu,
   onViewHighScores,
 }) {
   return (
@@ -27,13 +32,32 @@ function GameOverScreen({
             Level Reached: {completedLevel}
           </Text>
 
-          <TouchableOpacity style={styles.button} onPress={onNewGame}>
+          {/* Cyan: positive primary "try again" action */}
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#06b6d4' }]}
+            onPress={onNewGame}
+            accessibilityRole="button"
+            accessibilityLabel="New game in the same mode"
+          >
             <Text style={styles.buttonText}>New Game</Text>
           </TouchableOpacity>
 
+          {/* Default blue: neutral navigation back to menu */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={onMainMenu}
+            accessibilityRole="button"
+            accessibilityLabel="Back to main menu"
+          >
+            <Text style={styles.buttonText}>Main Menu</Text>
+          </TouchableOpacity>
+
+          {/* Purple: high scores, matches the landing screen color */}
           <TouchableOpacity
             style={[styles.button, { backgroundColor: '#9333ea' }]}
             onPress={onViewHighScores}
+            accessibilityRole="button"
+            accessibilityLabel="View high scores"
           >
             <Text style={styles.buttonText}>View High Scores</Text>
           </TouchableOpacity>

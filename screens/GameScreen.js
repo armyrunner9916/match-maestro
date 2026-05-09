@@ -38,13 +38,25 @@ function GameScreen({
             />
 
             <View style={styles.timerRow}>
-              <Text style={[styles.label, { color: darkMode ? '#ffffff' : '#000000', flex: 1 }]}>
+              <Text
+                style={[styles.label, { color: darkMode ? '#ffffff' : '#000000', flex: 1 }]}
+                accessibilityLabel={`Level ${level}`}
+              >
                 Level: {level}
               </Text>
-              <Text style={[styles.timer, { color: darkMode ? '#ffffff' : '#000000', flex: 1, textAlign: 'center' }]}>
+              <Text
+                style={[styles.timer, { color: darkMode ? '#ffffff' : '#000000', flex: 1, textAlign: 'center' }]}
+                accessibilityLabel={`Time remaining: ${timeLeft} seconds`}
+                accessibilityLiveRegion="polite"
+              >
                 Time: {timeLeft}s
               </Text>
-              <TouchableOpacity style={styles.giveUpButton} onPress={onEndGame}>
+              <TouchableOpacity
+                style={styles.giveUpButton}
+                onPress={onEndGame}
+                accessibilityRole="button"
+                accessibilityLabel="Give up and end this game"
+              >
                 <Text style={styles.giveUpButtonText}>Give Up</Text>
               </TouchableOpacity>
             </View>

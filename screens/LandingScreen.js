@@ -47,25 +47,43 @@ function LandingScreen({
           placeholderTextColor={darkMode ? '#999999' : '#666666'}
           value={playerName}
           onChangeText={setPlayerName}
+          accessibilityLabel="Player name"
         />
 
         <View style={styles.toggleRow}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => setDarkMode(!darkMode)}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => setDarkMode(!darkMode)}
+            accessibilityRole="button"
+            accessibilityLabel={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
             <Text>{darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={onOpenSettings}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={onOpenSettings}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+          >
             <Text>⚙️ Settings</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={onStartGame}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={onStartGame}
+          accessibilityRole="button"
+          accessibilityLabel="Start a new game"
+        >
           <Text style={styles.buttonText}>Start Game</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: '#9333ea' }]}
           onPress={onOpenHighScores}
+          accessibilityRole="button"
+          accessibilityLabel="View high scores"
         >
           <Text style={styles.buttonText}>High Scores</Text>
         </TouchableOpacity>
@@ -74,6 +92,8 @@ function LandingScreen({
           <TouchableOpacity
             style={[styles.button, { backgroundColor: '#d4af37', marginTop: 10 }]}
             onPress={onOpenPremium}
+            accessibilityRole="button"
+            accessibilityLabel="Remove ads, in-app purchase"
           >
             <Text style={[styles.buttonText, { color: '#000' }]}>💎 Remove Ads</Text>
           </TouchableOpacity>
@@ -91,6 +111,9 @@ function LandingScreen({
             style={styles.restoreButton}
             onPress={onRestorePurchases}
             disabled={isLoadingPremium}
+            accessibilityRole="button"
+            accessibilityLabel="Restore previous purchases"
+            accessibilityState={{ disabled: isLoadingPremium }}
           >
             {isLoadingPremium ? (
               <ActivityIndicator size="small" color={darkMode ? '#9ca3af' : '#6b7280'} />

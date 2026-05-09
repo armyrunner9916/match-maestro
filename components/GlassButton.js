@@ -31,12 +31,30 @@ const splitStyle = (style) => {
   return { outer, inner, borderRadius: flat.borderRadius ?? 12 };
 };
 
-const GlassButton = ({ tintColor, onPress, disabled, style, children, intensity = 50 }) => {
+const GlassButton = ({
+  tintColor,
+  onPress,
+  disabled,
+  style,
+  children,
+  intensity = 50,
+  // 9.7: Forward a11y props so consumers in Phase 3+ can label glass buttons
+  // without each call site duplicating Pressable boilerplate.
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
+}) => {
   const { outer, inner, borderRadius } = splitStyle(style);
+  const a11yProps = {
+    accessibilityRole: 'button',
+    accessibilityLabel,
+    accessibilityHint,
+    accessibilityState: { disabled: !!disabled, ...accessibilityState },
+  };
 
   if (Platform.OS === 'ios') {
     return (
-      <Pressable onPress={onPress} disabled={disabled} style={outer}>
+      <Pressable onPress={onPress} disabled={disabled} style={outer} {...a11yProps}>
         <BlurView
           tint="systemMaterial"
           intensity={intensity}
@@ -59,7 +77,7 @@ const GlassButton = ({ tintColor, onPress, disabled, style, children, intensity 
   }
 
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={outer}>
+    <Pressable onPress={onPress} disabled={disabled} style={outer} {...a11yProps}>
       <View style={[inner, { backgroundColor: tintColor, borderRadius }]}>{children}</View>
     </Pressable>
   );

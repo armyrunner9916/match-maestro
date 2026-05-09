@@ -7,6 +7,15 @@ import CardBack from './CardBack';
 function Card({ card, isFlipped, cardSize, cardBackColor, onPress }) {
   const showFace = isFlipped || card.isMatched;
 
+  // 9.7: Memory-match is unplayable without these labels for blind users.
+  // The label reflects the live state so VoiceOver announces what each tap
+  // reveals.
+  const a11yLabel = card.isMatched
+    ? 'Matched pair'
+    : isFlipped
+      ? `Card showing ${card.symbol}`
+      : 'Face-down card, double-tap to flip';
+
   return (
     <TouchableOpacity
       style={[
@@ -16,6 +25,9 @@ function Card({ card, isFlipped, cardSize, cardBackColor, onPress }) {
       ]}
       onPress={onPress}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityState={{ disabled: card.isMatched, selected: isFlipped }}
     >
       {showFace ? (
         <View style={{

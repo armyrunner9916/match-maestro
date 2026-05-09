@@ -20,10 +20,24 @@ export const REVENUECAT_API_KEYS = {
   android: 'goog_QWxzZRlzsqybdmaBHdFkxvuAxVA',
 };
 
-// AsyncStorage keys. Phase 9.2 will migrate these to a `matchMaestro:*` namespace.
-// Keep current keys here so the migration has a single source of truth.
+// AsyncStorage keys (active). All keys live under the `matchMaestro:*`
+// namespace post-9.2. Legacy keys are migrated once on first 2.0 launch via
+// migrateLegacyStorage() in game/storage.js.
 export const STORAGE_KEYS = {
+  highScores: 'matchMaestro:highScores',
+  settings: 'matchMaestro:settings',
+  premium: 'matchMaestro:premium',
+};
+
+// Legacy 1.x keys. Read once on first launch by migrateLegacyStorage(),
+// copied into STORAGE_KEYS, then deleted. Do not write to these.
+export const LEGACY_STORAGE_KEYS = {
   highScores: 'memoryMatchHighScores',
   settings: 'matchMaestroSettings',
   premium: 'matchMaestroIsPremium',
 };
+
+// Bump this when adding a new migration step so users on every prior
+// version migrate forward exactly once.
+export const STORAGE_MIGRATION_FLAG = 'matchMaestro:migrated';
+export const STORAGE_MIGRATION_VERSION = 'v2';

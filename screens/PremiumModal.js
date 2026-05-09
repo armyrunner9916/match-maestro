@@ -44,6 +44,9 @@ function PremiumModal({
             style={[styles.button, { backgroundColor: '#d4af37', marginBottom: 10 }]}
             onPress={onPurchase}
             disabled={isLoadingPremium}
+            accessibilityRole="button"
+            accessibilityLabel="Purchase ad-free for ninety-nine cents"
+            accessibilityState={{ disabled: isLoadingPremium, busy: isLoadingPremium }}
           >
             {isLoadingPremium ? (
               <ActivityIndicator color="#000" />
@@ -58,6 +61,9 @@ function PremiumModal({
             style={[styles.secondaryButton, { marginBottom: 10 }]}
             onPress={onRestore}
             disabled={isLoadingPremium}
+            accessibilityRole="button"
+            accessibilityLabel="Restore previous purchases"
+            accessibilityState={{ disabled: isLoadingPremium }}
           >
             <Text>🔄 Restore Purchases</Text>
           </TouchableOpacity>
@@ -66,6 +72,8 @@ function PremiumModal({
             style={styles.button}
             onPress={onClose}
             disabled={isLoadingPremium}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
           >
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>

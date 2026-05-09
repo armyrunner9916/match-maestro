@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Dimensions, Alert, Platform } from 'react-native';
+import { Alert, Platform, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import mobileAds from 'react-native-google-mobile-ads';
 import Purchases from 'react-native-purchases';
@@ -7,6 +7,7 @@ import Purchases from 'react-native-purchases';
 import { SYMBOLS, REVENUECAT_API_KEYS } from './game/constants';
 import {
   loadAllData,
+  migrateLegacyStorage,
   saveSettings as persistSettings,
   saveHighScores as persistHighScores,
   savePremium as persistPremium,
@@ -19,7 +20,14 @@ import SettingsModal from './screens/SettingsModal';
 import HighScoresModal from './screens/HighScoresModal';
 import PremiumModal from './screens/PremiumModal';
 
-const { width } = Dimensions.get('window');
+// Layout constants used by cardSize. These mirror the actual style values in
+// GameScreen.js so the math stays honest:
+//   content padding (16) * 2 sides   = 32
+//   gameGrid paddingHorizontal (10)*2 = 20
+// Total fixed horizontal chrome in the gameplay area = 52.
+// Each card's outer margin is 5*2 = 10, which gets subtracted per column.
+const GRID_HORIZONTAL_CHROME = 52;
+const CARD_HORIZONTAL_MARGIN = 10;
 
 // --- Top-level side effects (run once at module load) ----------------------
 
@@ -90,30 +98,31 @@ export default function App() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
 
-  // Calculate card size based on number of cards.
-  // Phase 9.3 will replace `width` with `useWindowDimensions()` for rotation/
-  // split-view support. Phase 9.5 will fix the padding math (currently uses
-  // padding=60 but actual layout pads content:16 + grid:10 + card margin:5).
+  // 9.3: Hook-based dimensions so card layout updates on rotation and iPad
+  // split-view, instead of capturing the window size once at module load.
+  const { width } = useWindowDimensions();
+
+  // 9.5: Compute card size from real layout chrome (no magic 60). The gameplay
+  // area's horizontal chrome is GRID_HORIZONTAL_CHROME; each column also eats
+  // CARD_HORIZONTAL_MARGIN for the card's outer margin.
   const cardSize = useMemo(() => {
     if (!width || width <= 0) return 80;
 
-    const padding = 60;
     const cardCount = cards.length || 4;
     let columns = 4;
-
     if (cardCount > 16) columns = 5;
     if (cardCount > 24) columns = 6;
     if (cardCount > 30) columns = 7;
 
-    const size = Math.floor((width - padding) / columns) - 10;
+    const availableWidth = width - GRID_HORIZONTAL_CHROME;
+    const size = Math.floor(availableWidth / columns) - CARD_HORIZONTAL_MARGIN;
     const isTablet = width >= 768;
 
     if (isTablet) {
       return Math.max(60, Math.min(120, size));
-    } else {
-      return Math.max(38, Math.min(80, size));
     }
-  }, [cards.length]);
+    return Math.max(38, Math.min(80, size));
+  }, [cards.length, width]);
 
   // Check premium status from RevenueCat and persist locally.
   const checkPremiumStatus = useCallback(async () => {
@@ -170,7 +179,7 @@ export default function App() {
     } finally {
       setIsLoadingPremium(false);
     }
-  }, []);
+  }, [triggerHaptic]); // 9.6: triggerHaptic was missing from deps
 
   // Restore previous purchases.
   const handleRestorePurchases = useCallback(async () => {
@@ -199,6 +208,10 @@ export default function App() {
   // Load high scores, settings, and premium status on mount.
   useEffect(() => {
     const loadGameData = async () => {
+      // 9.2: Migrate any 1.x AsyncStorage keys into the matchMaestro:*
+      // namespace before reading. Idempotent — no-ops on subsequent launches.
+      await migrateLegacyStorage();
+
       const { highScores: savedScores, settings: savedSettings, isPremium: savedPremium } =
         await loadAllData();
 
@@ -241,20 +254,21 @@ export default function App() {
     }
   }, [hapticEnabled]);
 
-  // Timer effect. Phase 9.8 will pause this during the 600ms match-resolution
-  // window so a player who matches the last pair right at time-out gets credit.
+  // Timer effect. 9.8: paused while a match is being evaluated so a player
+  // who taps the last pair just before time-out can't be robbed of credit by
+  // the 600ms resolution delay racing the 1s timer tick.
   useEffect(() => {
     let timer;
-    if (gameState === 'playing' && timeLeft > 0) {
+    if (gameState === 'playing' && timeLeft > 0 && !isProcessingMatch) {
       timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && gameState === 'playing') {
+    } else if (timeLeft === 0 && gameState === 'playing' && !isProcessingMatch) {
       endGame();
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [timeLeft, gameState]);
+  }, [timeLeft, gameState, isProcessingMatch]);
 
   // Build a fresh shuffled deck of `pairCount` pairs.
   const initializeCards = (pairCount = pairs) => {
@@ -287,6 +301,25 @@ export default function App() {
     setIsProcessingMatch(false);
     triggerHaptic('impact');
   };
+
+  // Advance to the next level. Phase 6.4 / 9.1 will fix the `completedLevel`
+  // semantic — it currently records the level entered, not the level finished.
+  // Declared before handleCardPress so the latter can list it in its deps.
+  const nextLevel = useCallback(() => {
+    const newLevel = level + 1;
+    const newPairs = Math.min(pairs + 1, SYMBOLS.length);
+    const newTimeLimit = timeLimit + 3;
+
+    setLevel(newLevel);
+    setPairs(newPairs);
+    setTimeLimit(newTimeLimit);
+    setTimeLeft(newTimeLimit);
+    setMatchedPairs([]);
+    setFlippedCards([]);
+    setCards(initializeCards(newPairs));
+    setCompletedLevel(newLevel);
+    triggerHaptic('success');
+  }, [level, pairs, timeLimit, triggerHaptic]);
 
   // Handle a card tap during gameplay.
   const handleCardPress = useCallback((cardId) => {
@@ -341,25 +374,11 @@ export default function App() {
         setIsProcessingMatch(false);
       }, 600);
     }
-  }, [gameState, cards, flippedCards, matchedPairs, pairs, isProcessingMatch, triggerHaptic]);
-
-  // Advance to the next level. Phase 6.4 / 9.1 will fix the `completedLevel`
-  // semantic — it currently records the level entered, not the level finished.
-  const nextLevel = useCallback(() => {
-    const newLevel = level + 1;
-    const newPairs = Math.min(pairs + 1, SYMBOLS.length);
-    const newTimeLimit = timeLimit + 3;
-
-    setLevel(newLevel);
-    setPairs(newPairs);
-    setTimeLimit(newTimeLimit);
-    setTimeLeft(newTimeLimit);
-    setMatchedPairs([]);
-    setFlippedCards([]);
-    setCards(initializeCards(newPairs));
-    setCompletedLevel(newLevel);
-    triggerHaptic('success');
-  }, [level, pairs, timeLimit, triggerHaptic]);
+  }, [
+    gameState, cards, flippedCards, matchedPairs, pairs,
+    isProcessingMatch, triggerHaptic,
+    nextLevel, // 9.6: nextLevel was missing from deps — caused stale level-up
+  ]);
 
   // End the current game and persist score if it qualifies.
   const endGame = useCallback(() => {
@@ -460,7 +479,8 @@ export default function App() {
         <GameOverScreen
           darkMode={darkMode}
           completedLevel={completedLevel}
-          onNewGame={() => setGameState('landing')}
+          onNewGame={startGame}
+          onMainMenu={() => setGameState('landing')}
           onViewHighScores={() => {
             setShowHighScores(true);
             setGameState('landing');
