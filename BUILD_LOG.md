@@ -180,6 +180,23 @@ those card-back assets.
 
 ---
 
+## Known issues — fix in a later phase
+
+- **Android top padding bug.** On Android phones and tablets, top-row content
+  (Settings icon, dark/light toggle, Match Maestro logo) gets pushed up under
+  the status bar. iOS handles this correctly via `SafeAreaView`. Confirmed
+  in 1.x; will recur in any new screen until fixed. Canonical fix is
+  Taplight's pattern:
+  ```js
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  }
+  ```
+  **Best phase to address:** Phase 3 (mode select screen redesign) — that's
+  when we rebuild the header row anyway. Apply to every screen's outer
+  container at that time, not just mode select.
+
 ## Open notes / reminders for future you
 
 - Existing high scores from 1.x **were preserved** by the storage
