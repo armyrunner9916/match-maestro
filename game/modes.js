@@ -72,12 +72,13 @@ export const MODES = {
     timerDelta: 0,
     mismatchPenalty: 0,
     levelCap: null,
-    // Function form: budget scales with pair count. (pairs + 1) gives 7 at
-    // level 1 / 8 at level 2 / 9 at level 3, which is generous enough to
-    // acquire info from a fresh deck and recover from a few memory slips
-    // without removing all consequence. Per-level — counter resets in
-    // nextLevel.
-    mistakeBudget: (pairs) => pairs + 1,
+    // Function form: budget scales with pair count. (pairs - 1) gives 5 at
+    // level 1 / 6 at level 2 / 7 at level 3 — tight enough to bite when
+    // combined with the lockFirstFlip "no peek" rule, but enough to
+    // acquire info from a fresh deck without first-flip death. Iterations
+    // (pairs - 3 → pairs + 1 → pairs - 1) bracketed the sweet spot.
+    // Per-level — counter resets in nextLevel.
+    mistakeBudget: (pairs) => pairs - 1,
     // No take-backsies: once you flip a card, tapping it again won't
     // un-flip it. Forces commitment so players can't "peek" at a card
     // and then back out once they've learned its symbol.
