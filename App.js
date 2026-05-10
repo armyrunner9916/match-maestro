@@ -126,8 +126,9 @@ export default function App() {
   // which point nextLevel actually advances the game. null = no toast.
   const [levelUpToastLevel, setLevelUpToastLevel] = useState(null);
 
-  // Settings state
-  const [darkMode, setDarkMode] = useState(true);
+  // Settings state. Phase 10: `darkMode` removed — every screen now
+  // assumes dark Liquid Glass styling. The toggle and prop plumbing
+  // were yanked rather than building out a real light-mode pass.
   const [cardBackColor, setCardBackColor] = useState('blue');
   const [showSettings, setShowSettings] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -270,7 +271,7 @@ export default function App() {
       if (savedModeStats) setModeStats(savedModeStats);
 
       if (savedSettings) {
-        setDarkMode(savedSettings.darkMode ?? true);
+        // savedSettings.darkMode is ignored — light mode removed in Phase 10.
         setCardBackColor(savedSettings.cardBackColor || 'blue');
         setHapticEnabled(savedSettings.hapticEnabled ?? true);
         if (savedSettings.playerName) setPlayerName(savedSettings.playerName);
@@ -286,8 +287,8 @@ export default function App() {
 
   // Persist settings whenever they change.
   useEffect(() => {
-    persistSettings({ darkMode, cardBackColor, hapticEnabled, playerName });
-  }, [darkMode, cardBackColor, hapticEnabled, playerName]);
+    persistSettings({ cardBackColor, hapticEnabled, playerName });
+  }, [cardBackColor, hapticEnabled, playerName]);
 
   // Haptic feedback helper.
   const triggerHaptic = useCallback((type = 'impact') => {
@@ -589,7 +590,6 @@ export default function App() {
       <SettingsModal
         visible={showSettings}
         onClose={() => setShowSettings(false)}
-        darkMode={darkMode}
         cardBackColor={cardBackColor}
         setCardBackColor={setCardBackColor}
         hapticEnabled={hapticEnabled}
@@ -598,7 +598,6 @@ export default function App() {
       <PremiumModal
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
-        darkMode={darkMode}
         isLoadingPremium={isLoadingPremium}
         onPurchase={handlePurchaseAdsRemoval}
         onRestore={handleRestorePurchases}
@@ -610,8 +609,6 @@ export default function App() {
     return (
       <>
         <ModeSelectScreen
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
           playerName={playerName}
           setPlayerName={setPlayerName}
           modeStats={modeStats}
@@ -641,7 +638,6 @@ export default function App() {
     return (
       <>
         <GameScreen
-          darkMode={darkMode}
           mode={mode}
           level={level}
           timeLeft={timeLeft}
@@ -679,7 +675,6 @@ export default function App() {
     return (
       <>
         <GameOverScreen
-          darkMode={darkMode}
           mode={mode}
           outcome={gameOutcome ?? 'timeout'}
           level={level}

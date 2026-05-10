@@ -32,7 +32,6 @@ const TILE_SIZE = 76;
 function SettingsModal({
   visible,
   onClose,
-  darkMode,
   cardBackColor,
   setCardBackColor,
   hapticEnabled,

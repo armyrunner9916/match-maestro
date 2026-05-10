@@ -23,7 +23,6 @@ import { MODES } from '../game/modes';
 //
 // Phase 6 still pending: 6.3 level-up celebration, 6.5 card flip animation.
 function GameScreen({
-  darkMode,
   mode,
   level,
   timeLeft,
@@ -40,7 +39,7 @@ function GameScreen({
 }) {
   const cfg = MODES[mode];
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: COLORS.bgNavy }]}>
       <View style={{ flex: 1 }}>
         <View style={styles.content}>
           <View style={styles.header}>

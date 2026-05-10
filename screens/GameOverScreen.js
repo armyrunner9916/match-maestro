@@ -54,7 +54,6 @@ const VARIANTS = {
 const formatMisses = (n) => `${n} miss${n === 1 ? '' : 'es'}`;
 
 function GameOverScreen({
-  darkMode,
   mode,
   outcome = 'timeout',
   level,
@@ -90,12 +89,7 @@ function GameOverScreen({
   };
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight },
-      ]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: COLORS.bgNavy }]}>
       <View style={styles.center}>
         <GlassPanel style={styles.panel}>
           {isNewHighScore && (

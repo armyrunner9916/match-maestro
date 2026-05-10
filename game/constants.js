@@ -11,10 +11,10 @@ export const SYMBOLS = [
 // Phase 3 brand colors. Background sits a few shades above pure black with
 // a distinct navy cast (avoids the slight purple tone of the previous
 // `#1a1a2e`). Used by every full-screen container so Liquid Glass surfaces
-// pop against a consistent dark base. Tweak in one place.
+// pop against a consistent dark base. Tweak in one place. Phase 10 dropped
+// the light-mode equivalent — the app is dark-only.
 export const COLORS = {
   bgNavy: '#0a1228',
-  bgNavyLight: '#f5f5f5', // light-mode equivalent (pre-existing screens use this)
 };
 
 // AdMob banner ad unit ID (production)

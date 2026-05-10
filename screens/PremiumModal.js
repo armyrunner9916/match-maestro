@@ -11,7 +11,6 @@ import {
 function PremiumModal({
   visible,
   onClose,
-  darkMode,
   isLoadingPremium,
   onPurchase,
   onRestore,
@@ -19,23 +18,23 @@ function PremiumModal({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: darkMode ? '#16213e' : '#ffffff' }]}>
+        <View style={styles.card}>
           <Text style={[styles.title, { color: '#d4af37' }]}>💎 Go Premium!</Text>
-          <Text style={[styles.label, styles.subtitle, { color: darkMode ? '#cccccc' : '#666666' }]}>
+          <Text style={[styles.label, styles.subtitle]}>
             Remove all ads and enjoy Match Maestro uninterrupted
           </Text>
 
-          <View style={[styles.benefitsBox, { backgroundColor: darkMode ? '#1a1a2e' : '#f5f5f5' }]}>
-            <Text style={[styles.label, styles.benefitsTitle, { color: darkMode ? '#ffffff' : '#000000' }]}>
+          <View style={styles.benefitsBox}>
+            <Text style={[styles.label, styles.benefitsTitle]}>
               ✨ Premium Benefits:
             </Text>
-            <Text style={[styles.label, styles.benefitsItem, { color: darkMode ? '#cccccc' : '#666666' }]}>
+            <Text style={[styles.label, styles.benefitsItem]}>
               🎮 Ad-free gameplay
             </Text>
-            <Text style={[styles.label, styles.benefitsItem, { color: darkMode ? '#cccccc' : '#666666' }]}>
+            <Text style={[styles.label, styles.benefitsItem]}>
               ⚡ Unlock full experience
             </Text>
-            <Text style={[styles.label, { color: darkMode ? '#cccccc' : '#666666' }]}>
+            <Text style={styles.label}>
               🎯 Support the developer
             </Text>
           </View>
@@ -93,6 +92,7 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 12,
     padding: 20,
+    backgroundColor: '#16213e', // Phase 10: dark-only
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     marginVertical: 8,
+    color: '#cccccc',
   },
   subtitle: {
     marginBottom: 20,
@@ -117,10 +118,12 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     marginBottom: 20,
+    backgroundColor: '#1a1a2e',
   },
   benefitsTitle: {
     fontWeight: 'bold',
     marginBottom: 8,
+    color: '#ffffff',
   },
   benefitsItem: {
     marginBottom: 5,

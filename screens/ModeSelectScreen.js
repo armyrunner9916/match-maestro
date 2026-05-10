@@ -98,8 +98,6 @@ const ModeTile = ({ modeId, modeStats, onPress }) => {
 };
 
 function ModeSelectScreen({
-  darkMode,
-  setDarkMode,
   playerName,
   setPlayerName,
   modeStats,
@@ -111,26 +109,14 @@ function ModeSelectScreen({
   isLoadingPremium,
 }) {
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight },
-      ]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: COLORS.bgNavy }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Compact header row: dark/light toggle | banner | settings icon */}
+        {/* Compact header row: invisible spacer + banner + settings icon.
+            Phase 10 dropped the dark/light toggle entirely — the app is
+            dark-only. The 44pt spacer on the left mirrors the gear
+            button on the right so the banner stays visually centered. */}
         <View style={styles.headerRow}>
-          <Pressable
-            onPress={() => setDarkMode(!darkMode)}
-            style={({ pressed }) => [
-              styles.headerIcon,
-              pressed && { opacity: 0.6 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            <Text style={styles.headerIconText}>{darkMode ? '☀️' : '🌙'}</Text>
-          </Pressable>
+          <View style={styles.headerSpacer} />
 
           <Image
             source={require('../assets/banner.png')}
@@ -152,16 +138,9 @@ function ModeSelectScreen({
         </View>
 
         <TextInput
-          style={[
-            styles.input,
-            {
-              color: darkMode ? '#ffffff' : '#000000',
-              borderColor: darkMode ? 'rgba(255,255,255,0.18)' : '#cccccc',
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : '#ffffff',
-            },
-          ]}
+          style={styles.input}
           placeholder="Enter your name"
-          placeholderTextColor={darkMode ? '#9ca3af' : '#666666'}
+          placeholderTextColor="#9ca3af"
           value={playerName}
           onChangeText={setPlayerName}
           accessibilityLabel="Player name"
@@ -214,14 +193,9 @@ function ModeSelectScreen({
               accessibilityState={{ disabled: isLoadingPremium }}
             >
               {isLoadingPremium ? (
-                <ActivityIndicator size="small" color={darkMode ? '#9ca3af' : '#6b7280'} />
+                <ActivityIndicator size="small" color="#9ca3af" />
               ) : (
-                <Text
-                  style={[
-                    styles.restoreText,
-                    { color: darkMode ? '#9ca3af' : '#6b7280' },
-                  ]}
-                >
+                <Text style={[styles.restoreText, { color: '#9ca3af' }]}>
                   🔄  Restore Purchases
                 </Text>
               )}
@@ -260,6 +234,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Same width as headerIcon — invisible spacer on the left of the
+  // headerRow so the banner image stays visually centered after the
+  // dark/light toggle was removed in Phase 10.
+  headerSpacer: {
+    width: 44,
+    height: 44,
+  },
   headerIconText: {
     fontSize: 22,
   },
@@ -275,6 +256,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     marginBottom: 16,
+    color: '#ffffff',
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   gridContainer: {
     rowGap: GRID_GAP,
