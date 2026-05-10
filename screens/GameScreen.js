@@ -36,6 +36,7 @@ function GameScreen({
   isPremium,
   onCardPress,
   onPause,
+  onGiveUp,
 }) {
   const cfg = MODES[mode];
   return (
@@ -96,10 +97,20 @@ function GameScreen({
               <GlassButton
                 tintColor="rgba(255,255,255,0.18)"
                 onPress={onPause}
-                style={styles.pauseButton}
+                style={styles.iconButton}
                 accessibilityLabel="Pause the game"
               >
-                <Text style={styles.pauseIcon}>⏸</Text>
+                <Text style={styles.iconText}>⏸</Text>
+              </GlassButton>
+
+              <GlassButton
+                tintColor="rgba(239,68,68,0.55)"
+                onPress={onGiveUp}
+                style={styles.iconButton}
+                accessibilityLabel="Give up and end this run"
+                accessibilityHint="Ends the current run immediately"
+              >
+                <Text style={styles.iconText}>🛑</Text>
               </GlassButton>
             </View>
           </View>
@@ -158,11 +169,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 8,
   },
-  // Phase 6.1: GlassPanel-based status header.
+  // Phase 6.1: GlassPanel-based status header. Layout: panel (flex 1)
+  // + 8px gap + Pause icon (44) + 8px gap + Give Up icon (44).
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: 10,
+    columnGap: 8,
   },
   statusPanel: {
     flex: 1,
@@ -198,14 +210,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.45)',
   },
-  pauseButton: {
+  // Phase 6.1 + give-up addition: square icon buttons in the header row.
+  // Same dimensions for Pause and Give Up so they read as a paired
+  // toolbar; tint colors differentiate (neutral glass vs red).
+  iconButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pauseIcon: {
+  iconText: {
     fontSize: 20,
     color: '#ffffff',
   },

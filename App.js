@@ -675,6 +675,7 @@ export default function App() {
           isPremium={isPremium}
           onCardPress={handleCardPress}
           onPause={() => setIsPaused(true)}
+          onGiveUp={() => endGame('gaveUp')}
         />
         {levelUpToastLevel !== null && (
           <LevelUpToast

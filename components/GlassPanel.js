@@ -18,6 +18,12 @@ const splitStyle = (style) => {
       key === 'marginHorizontal' ||
       key === 'marginVertical' ||
       key === 'width' ||
+      key === 'maxWidth' ||
+      key === 'minWidth' ||
+      key === 'flex' ||
+      key === 'flexGrow' ||
+      key === 'flexShrink' ||
+      key === 'flexBasis' ||
       key === 'alignSelf'
     ) {
       outer[key] = value;
