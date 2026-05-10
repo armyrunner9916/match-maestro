@@ -65,7 +65,7 @@ function GameScreen({
                     style={styles.statusItem}
                     accessibilityLabel={`Level ${level}`}
                   >
-                    Level {level}
+                    LVL {level}
                   </Text>
                   {hasTimer && (
                     <>
@@ -87,7 +87,7 @@ function GameScreen({
                         accessibilityLabel={`${mistakesLeft} mistakes remaining`}
                         accessibilityLiveRegion="polite"
                       >
-                        Misses left: {mistakesLeft}
+                        Misses: {mistakesLeft}
                       </Text>
                     </>
                   )}
@@ -182,13 +182,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  // No flexWrap — content stays on one line. Modest columnGap + clipping
-  // through the panel's `overflow: hidden` keeps long text in-bounds on
-  // narrower devices (iPhone SE-class). If overflow ever bites, shorten
-  // the labels first ("Lvl" instead of "Level") before reducing fonts.
+  // Centered inner row — items stack centrally rather than left-aligned,
+  // which feels balanced under the centered banner image. No flexWrap so
+  // content stays on one line; abbreviated labels ("LVL N" / "Misses: N")
+  // keep even Challenge's longest case in-bounds on iPhone SE-class
+  // displays. Panel's `overflow: hidden` clips any future overflow.
   statusInner: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     columnGap: 6,
   },
   modeChip: {
