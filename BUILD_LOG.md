@@ -10,15 +10,18 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `d558343 Phase 6.5: rotateY card flip animation`
-**Working tree:** clean (local — push pending)
-**App state:** Phase 6 + 8 complete. End-to-end gameplay loop is now
-Liquid Glass throughout — mode select, in-game header, pause, level-up
-celebration, game over. Card flips animate. Game Over screen is
-per-mode-aware (timeout / mistakes / gaveUp / Easy completion variants)
-with a "🎉 New high score!" callout and a native Share button pointed
-at `https://matchmaestro.app`. Only Phase 10 (QA + ship) and the
-light-mode decision remain on the 2.0 roadmap.
+**Last commit:** `9c7e448 Phase 6.1 polish: center status panel content + abbreviate labels`
+**Working tree:** clean, all commits pushed
+**App state:** Phase 6 + 8 complete + post-ship polish. End-to-end
+gameplay loop is now Liquid Glass throughout — mode select, in-game
+header, pause, level-up celebration, game over. Card flips animate.
+Game Over screen is per-mode-aware (timeout / mistakes / gaveUp /
+Easy completion variants) with a "🎉 New high score!" callout and a
+native Share button pointed at `https://matchmaestro.app`. In-game
+header has Pause + Give Up icons side-by-side (one-tap exit option).
+HighScoresModal removed — per-mode best lives on the mode tiles which
+were enlarged to fill the freed vertical space. Only Phase 10 (QA +
+ship) and the light-mode decision remain on the 2.0 roadmap.
 
 Game flow: tap mode tile → play that mode → level-up toast between
 levels → game over variant matches outcome → main menu (returns to
@@ -56,6 +59,10 @@ d047f10 Phase 6.1 fix: status panel content stays on one row
 1fc61cd Phase 8: Game Over redesign — per-mode-aware Liquid Glass variants
 10bcdab Phase 6.3: Level-up celebration toast
 d558343 Phase 6.5: rotateY card flip animation
+5dbba63 docs: sync BUILD_LOG with Phase 6 + 8 completion
+6bff305 Fix: GlassPanel/GlassButton swallowed flex; add Give Up button
+dbaeeb4 Phase 8 cleanup: remove HighScoresModal, enlarge mode tiles
+9c7e448 Phase 6.1 polish: center status panel content + abbreviate labels
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -457,6 +464,48 @@ Not caught earlier because the New Game path on Game Over wasn't
 exercised during Phase 4 smoke testing (ModeSelectScreen didn't
 exist yet — every start went through LandingScreen's `startGame()`).
 
+### Phase 6 + 8 polish iterations ✅
+
+The first cut of Phase 6 + 8 shipped functional but had layout
+issues spotted in user testing. Three polish commits brought the
+in-game header and home screen to ship-quality:
+
+1. **`6bff305` GlassPanel/GlassButton flex bug + Give Up button.**
+   The status panel sat with huge dead space on the right despite
+   `flex: 1` in its style. Root cause: `splitStyle()` inside both
+   GlassPanel and GlassButton routed `flex` (and friends) to the
+   inner content View instead of the outer BlurView wrapper. The
+   wrapper sized to its content, never expanded. Fixed by adding
+   `flex` / `flexGrow` / `flexShrink` / `flexBasis` / `minWidth` /
+   `maxWidth` to the outer-keys list in both components. Same
+   commit added a red Give Up GlassButton (44×44, 🛑 icon) next
+   to the Pause button — players asked for one-tap exit since
+   Pause → Quit was two taps. Pause keeps its role; Give Up
+   bypasses the overlay and fires `endGame('gaveUp')` directly.
+2. **`dbaeeb4` HighScoresModal removed entirely.** User flagged
+   that the legacy top-10 list mixed modes confusingly (Level 10
+   in Easy is a completion; in Hard it's a serious achievement).
+   Considered three options: drop, redesign with per-mode tabs,
+   or build a Stats modal. Picked drop — per-mode best already
+   lives on the mode tiles, the modal was duplicate data + dead
+   code. Removals: HighScoresModal.js, the legacy `highScores`
+   state + array writes in endGame, the High Scores GlassButton
+   on ModeSelectScreen, the `saveHighScores` storage helper.
+   Preserved: `STORAGE_KEYS.highScores` constant + v3 migration
+   read so existing 1.x users still get their max level seeded
+   into modeStats.normal.bestLevel. Mode tiles grew to absorb
+   freed vertical space (minHeight 140 → 180, padding 16 → 20,
+   label 20pt → 24pt). Future per-mode Stats modal noted under
+   "Open notes" for post-2.0.
+3. **`9c7e448` Status panel centered + labels abbreviated.**
+   Even with the flex bug fixed, two issues remained: content
+   was left-aligned within the now-expanded panel (lopsided
+   look), and Challenge's "Misses left: N" clipped at the right
+   edge. Added `justifyContent: 'center'` to the inner row;
+   shortened "Level N" → "LVL N" and "Misses left: N" →
+   "Misses: N". accessibilityLabel for both still emits the
+   full long form for screen-reader users.
+
 ### iPad portrait lock ✅
 
 `UISupportedInterfaceOrientations~ipad` was retaining all four
@@ -625,6 +674,41 @@ Maestro's UX is vertical-first.
     captures the comparison inline against the pre-mutation
     modeStats snapshot, sets `isNewHighScore` state, then performs
     the update.
+30. **`splitStyle` outer-keys list expanded** — GlassPanel and
+    GlassButton internally split a style object into outer (the
+    BlurView wrapper) and inner (content View). The original list
+    only included margin-related props, width, alignSelf, and
+    borderRadius. Any layout prop NOT in the list silently went
+    to inner — including `flex`, which defeated `flex: 1` on
+    panels meant to expand. Lesson: when a component splits style
+    props between layers, the keys list must comprehensively cover
+    layout-shaping props, not just the ones the original consumers
+    happened to use. Added flex* + minWidth/maxWidth to both
+    components.
+31. **Give Up alongside Pause, not replacing it** — when adding the
+    Give Up button to the in-game header, considered whether to
+    keep Pause at all (since Pause → Quit gets you to the same
+    destination). Kept both. Pause means "I want to break without
+    losing progress"; Give Up means "I'm done, end this run".
+    Different intents deserve different affordances. The 44×44
+    icon real estate is cheap; the UX clarity is significant.
+32. **HighScoresModal dropped, not redesigned** — three options on
+    the table: (a) drop entirely, (b) per-mode tabs, (c) full Stats
+    modal with extended fields. Picked (a). The mode tiles already
+    surface the per-mode best stat each user actually cares about;
+    rebuilding a tabs UI for the same data was redundant; a richer
+    Stats modal needs a modeStats schema extension and a v4
+    storage migration that's not justified for 2.0 timing. Stats
+    modal noted under "Open notes" for post-launch.
+33. **Long labels in confined surfaces — abbreviate, don't shrink** —
+    when Challenge's "Misses left: N" clipped in the status panel,
+    considered reducing fontSize 14 → 13 to make everything fit.
+    Rejected — the dot dividers and existing typography are
+    already at the small end; further shrink hurts readability
+    more than the abbreviation does. Abbreviated labels ("LVL"
+    instead of "Level", "Misses:" instead of "Misses left:") with
+    accessibilityLabel preserving the long form for screen-reader
+    users.
 
 ---
 
@@ -768,25 +852,34 @@ and verification path to a real 2.0 release.
   normalized, iPad portrait lock corrected
 - **GitHub:** repo created, all history pushed, Keychain configured
 
-### Afternoon session — 2026-05-10 (Phases 6 + 8)
+### Afternoon + evening session — 2026-05-10 (Phases 6 + 8 + polish)
 
-- **7 commits** landed locally (push pending)
-- **Phases completed:** 6 (all five items) + 8 (all four items)
+- **11 commits** total (8 implementation + 3 polish), all pushed
+  to GitHub by end of session
+- **Phases completed:** 6 (all five items) + 8 (all four items) +
+  three polish iterations addressing layout bugs and UX feedback
 - **Files added:** `screens/PauseOverlay.js`, `screens/LevelUpToast.js`
 - **Files significantly rewritten:** `screens/GameScreen.js` (header
-  redesign), `screens/GameOverScreen.js` (per-mode variants + Liquid
-  Glass), `components/Card.js` (flip animation)
+  redesign + give-up button + center/abbreviate polish),
+  `screens/GameOverScreen.js` (per-mode variants + Liquid Glass),
+  `components/Card.js` (flip animation)
+- **Files deleted:** `screens/HighScoresModal.js`
 - **New state in App.js:** `levelReached` (replaces `completedLevel`),
   `isPaused`, `isNewHighScore`, `levelUpToastLevel`
 - **Closed bugs:** Phase 9.1 (`completedLevel` semantic), New Game
-  crash on Game Over (synthetic event leaking into `startGame(modeId)`)
+  crash on Game Over (synthetic event leaking into `startGame(modeId)`),
+  GlassPanel/GlassButton swallowing flex layout props, status panel
+  text clipping on Challenge mode
 - **Animation work:** Animated.sequence for level-up toast (180/450/220
   ms fade-in/hold/fade-out with spring on scale), rotateY card flip
   (200ms cubic ease-out, two-face stack with backfaceVisibility)
 - **Share integration:** native `Share.share()` from React Native,
   pointed at https://matchmaestro.app for cross-platform redirect
-- **2.0 status:** all gameplay-shaping work complete; only Phase 10
-  (QA + ship) and the light-mode decision remain.
+- **Net code delta over the day:** +1180 / −350 lines (plus the
+  HighScoresModal removal pruning 168 lines on its own)
+- **2.0 status:** all gameplay-shaping work complete and shipped to
+  origin/main; only Phase 10 (QA + ship) and the light-mode
+  decision remain.
 
 ### Morning session — 2026-05-10 (Phases 4, 3, polish)
 
