@@ -3,7 +3,7 @@ import {
   SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Image,
   StyleSheet,
@@ -12,12 +12,19 @@ import {
 } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import Card from '../components/Card';
+import GlassPanel from '../components/GlassPanel';
+import GlassButton from '../components/GlassButton';
 import { ADMOB_BANNER_ID, COLORS } from '../game/constants';
+import { MODES } from '../game/modes';
 
-// Phase 6 will add: pause overlay (replacing Give Up), level-up celebration,
-// per-mode stats panel via <GlassPanel>, and the rotateY card flip animation.
+// Phase 6.1: GlassPanel header (mode chip + level + timer/mistakes).
+// Phase 6.2: Pause icon (replaces Give Up button) — wired to onPause prop;
+// the PauseOverlay modal renders separately from App.js.
+//
+// Phase 6 still pending: 6.3 level-up celebration, 6.5 card flip animation.
 function GameScreen({
   darkMode,
+  mode,
   level,
   timeLeft,
   hasTimer = true,
@@ -28,8 +35,9 @@ function GameScreen({
   cardBackColor,
   isPremium,
   onCardPress,
-  onEndGame,
+  onPause,
 }) {
+  const cfg = MODES[mode];
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight }]}>
       <View style={{ flex: 1 }}>
@@ -41,48 +49,58 @@ function GameScreen({
               resizeMode="contain"
             />
 
-            {/* Phase 3: mistake counter for modes with a budget (Challenge).
-                Sits directly under the logo; modes without a budget skip
-                rendering this row entirely. */}
-            {mistakesLeft !== null && (
-              <Text
-                style={styles.mistakesIndicator}
-                accessibilityLabel={`${mistakesLeft} mistakes remaining`}
-                accessibilityLiveRegion="polite"
-              >
-                Mistakes left: {mistakesLeft}
-              </Text>
-            )}
+            {/* Status row: GlassPanel info bar + Pause icon button. The
+                panel surfaces mode label (in brand tint) and the two
+                relevant numbers — level always, then either time or
+                mistakes-left depending on the mode. */}
+            <View style={styles.statusRow}>
+              <GlassPanel style={styles.statusPanel}>
+                <View style={styles.statusInner}>
+                  <Text style={[styles.modeChip, { color: cfg.tint }]}>
+                    {cfg.label.toUpperCase()}
+                  </Text>
+                  <Text style={styles.divider}>·</Text>
+                  <Text
+                    style={styles.statusItem}
+                    accessibilityLabel={`Level ${level}`}
+                  >
+                    Level {level}
+                  </Text>
+                  {hasTimer && (
+                    <>
+                      <Text style={styles.divider}>·</Text>
+                      <Text
+                        style={styles.statusItem}
+                        accessibilityLabel={`Time remaining: ${timeLeft} seconds`}
+                        accessibilityLiveRegion="polite"
+                      >
+                        {timeLeft}s
+                      </Text>
+                    </>
+                  )}
+                  {!hasTimer && mistakesLeft !== null && (
+                    <>
+                      <Text style={styles.divider}>·</Text>
+                      <Text
+                        style={[styles.statusItem, styles.mistakesItem]}
+                        accessibilityLabel={`${mistakesLeft} mistakes remaining`}
+                        accessibilityLiveRegion="polite"
+                      >
+                        Misses left: {mistakesLeft}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              </GlassPanel>
 
-            <View style={styles.timerRow}>
-              <Text
-                style={[styles.label, { color: darkMode ? '#ffffff' : '#000000', flex: 1 }]}
-                accessibilityLabel={`Level ${level}`}
+              <GlassButton
+                tintColor="rgba(255,255,255,0.18)"
+                onPress={onPause}
+                style={styles.pauseButton}
+                accessibilityLabel="Pause the game"
               >
-                Level: {level}
-              </Text>
-              {hasTimer ? (
-                <Text
-                  style={[styles.timer, { color: darkMode ? '#ffffff' : '#000000', flex: 1, textAlign: 'center' }]}
-                  accessibilityLabel={`Time remaining: ${timeLeft} seconds`}
-                  accessibilityLiveRegion="polite"
-                >
-                  Time: {timeLeft}s
-                </Text>
-              ) : (
-                // Phase 4: Challenge mode runs without a clock. Phase 3 will
-                // replace this row with a per-mode header that surfaces
-                // mistakes-remaining instead of seconds.
-                <View style={{ flex: 1 }} />
-              )}
-              <TouchableOpacity
-                style={styles.giveUpButton}
-                onPress={onEndGame}
-                accessibilityRole="button"
-                accessibilityLabel="Give up and end this game"
-              >
-                <Text style={styles.giveUpButtonText}>Give Up</Text>
-              </TouchableOpacity>
+                <Text style={styles.pauseIcon}>⏸</Text>
+              </GlassButton>
             </View>
           </View>
 
@@ -140,41 +158,53 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 8,
   },
-  label: {
-    fontSize: 16,
-    marginVertical: 8,
-  },
-  timer: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  mistakesIndicator: {
-    fontSize: 16,
-    fontWeight: '700',
-    // Light purple matches the Challenge brand tint at higher luminance
-    // for readable contrast over the navy bg. Phase 6 will wrap this
-    // line in a GlassPanel header alongside level/timer.
-    color: '#d8b4fe',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  timerRow: {
+  // Phase 6.1: GlassPanel-based status header.
+  statusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    columnGap: 10,
   },
-  giveUpButton: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+  statusPanel: {
     flex: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
-  giveUpButtonText: {
+  statusInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 8,
+    flexWrap: 'wrap',
+  },
+  modeChip: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  statusItem: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#ffffff',
-    fontWeight: 'bold',
+  },
+  // Light purple to tie the mistakes counter to the Challenge brand tint
+  // at higher luminance for readable contrast against the panel surface.
+  mistakesItem: {
+    color: '#d8b4fe',
+  },
+  divider: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.45)',
+  },
+  pauseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pauseIcon: {
+    fontSize: 20,
+    color: '#ffffff',
   },
   gameGrid: {
     flexDirection: 'row',

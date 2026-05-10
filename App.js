@@ -16,6 +16,7 @@ import {
 } from './game/storage';
 
 import ModeSelectScreen from './screens/ModeSelectScreen';
+import PauseOverlay from './screens/PauseOverlay';
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import SettingsModal from './screens/SettingsModal';
@@ -106,6 +107,11 @@ export default function App() {
   const [totalMismatches, setTotalMismatches] = useState(0);
   const [mistakesThisLevel, setMistakesThisLevel] = useState(0);
   const [gameOutcome, setGameOutcome] = useState(null);
+
+  // Phase 6.2: pause overlay state. When true, the timer effect halts and
+  // handleCardPress no-ops. The PauseOverlay modal renders over GameScreen
+  // with Resume / Quit buttons. Reset by startGame.
+  const [isPaused, setIsPaused] = useState(false);
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -300,16 +306,16 @@ export default function App() {
     if (timeLimit === null) return;
 
     let timer;
-    if (gameState === 'playing' && timeLeft > 0 && !isProcessingMatch) {
+    if (gameState === 'playing' && timeLeft > 0 && !isProcessingMatch && !isPaused) {
       timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && gameState === 'playing' && !isProcessingMatch) {
+    } else if (timeLeft === 0 && gameState === 'playing' && !isProcessingMatch && !isPaused) {
       endGame('timeout');
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [timeLeft, gameState, isProcessingMatch, timeLimit]);
+  }, [timeLeft, gameState, isProcessingMatch, timeLimit, isPaused]);
 
   // Build a fresh shuffled deck of `pairCount` pairs.
   const initializeCards = (pairCount = pairs) => {
@@ -347,6 +353,7 @@ export default function App() {
     setTotalMismatches(0);
     setMistakesThisLevel(0);
     setGameOutcome(null);
+    setIsPaused(false);
     triggerHaptic('impact');
   };
 
@@ -454,7 +461,7 @@ export default function App() {
 
   // Handle a card tap during gameplay.
   const handleCardPress = useCallback((cardId) => {
-    if (gameState !== 'playing' || isProcessingMatch) return;
+    if (gameState !== 'playing' || isProcessingMatch || isPaused) return;
     const cfg = MODES[mode];
 
     const clickedCard = cards.find(card => card.id === cardId);
@@ -535,7 +542,7 @@ export default function App() {
     }
   }, [
     gameState, cards, flippedCards, matchedPairs, pairs,
-    isProcessingMatch, triggerHaptic,
+    isProcessingMatch, isPaused, triggerHaptic,
     mode, timeLimit, mistakesThisLevel, endGame,
     nextLevel, // 9.6: nextLevel was missing from deps — caused stale level-up
   ]);
@@ -609,6 +616,7 @@ export default function App() {
       <>
         <GameScreen
           darkMode={darkMode}
+          mode={mode}
           level={level}
           timeLeft={timeLeft}
           hasTimer={timeLimit !== null}
@@ -619,7 +627,15 @@ export default function App() {
           cardBackColor={cardBackColor}
           isPremium={isPremium}
           onCardPress={handleCardPress}
-          onEndGame={() => endGame('gaveUp')}
+          onPause={() => setIsPaused(true)}
+        />
+        <PauseOverlay
+          visible={isPaused}
+          onResume={() => setIsPaused(false)}
+          onQuit={() => {
+            setIsPaused(false);
+            endGame('gaveUp');
+          }}
         />
         {modals}
       </>
