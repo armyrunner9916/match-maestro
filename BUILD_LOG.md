@@ -10,18 +10,21 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `cb931ad Phase 10: drop light mode entirely`
+**Last commit:** `00c1e96 chore: bump version to 2.0.0 for App Store + Play Store submission`
 **Working tree:** clean, all commits pushed
 **App state:** All gameplay and visual work for 2.0 is complete.
-Phase 10 has begun — light mode dropped (dark-only now), version
-bumps + real-device testing + store submission remain. End-to-end
-gameplay loop is fully Liquid Glass — mode select, in-game header,
-pause, level-up celebration, game over. Card flips animate. Game
-Over screen is per-mode-aware (timeout / mistakes / gaveUp / Easy
-completion variants) with a "🎉 New high score!" callout and a
-native Share button pointed at `https://matchmaestro.app`. In-game
-header has Pause + Give Up icons side-by-side. HighScoresModal
-removed; per-mode best lives on the mode tiles.
+Phase 10 in progress — light mode dropped, version bumped to 2.0.0
+across all four platform config surfaces. Remaining: real-device
+testing, AdMob + RevenueCat sandbox verification, App Store + Play
+Store metadata/screenshots, production builds (Xcode for iOS, EAS
+for Android), submissions. End-to-end gameplay loop is fully Liquid
+Glass — mode select, in-game header, pause, level-up celebration,
+game over. Card flips animate. Game Over screen is per-mode-aware
+(timeout / mistakes / gaveUp / Easy completion variants) with a
+"🎉 New high score!" callout and a native Share button pointed at
+`https://matchmaestro.app`. In-game header has Pause + Give Up
+icons side-by-side. HighScoresModal removed; per-mode best lives
+on the mode tiles.
 
 Game flow: tap mode tile → play that mode → level-up toast between
 levels → game over variant matches outcome → main menu (returns to
@@ -65,6 +68,8 @@ dbaeeb4 Phase 8 cleanup: remove HighScoresModal, enlarge mode tiles
 9c7e448 Phase 6.1 polish: center status panel content + abbreviate labels
 9c43dd2 docs: sync BUILD_LOG with Phase 6 + 8 polish iterations
 cb931ad Phase 10: drop light mode entirely
+d514064 docs: sync BUILD_LOG with Phase 10 kickoff (light-mode dropped)
+00c1e96 chore: bump version to 2.0.0 for App Store + Play Store submission
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -755,14 +760,20 @@ real-device QA, store submission.
 1. ✅ **Light-mode decision.** Dropped entirely. Dark-only app.
    Code change shipped in `cb931ad`. Existing users' stored
    `darkMode` setting is silently ignored on load.
-2. ⏭️ **Version bumps** (Steve handling — has the keys to all the
-   relevant config files). Bump from `1.0.3` → `2.0.0` in:
-   - `package.json` (`version` field)
-   - `app.json` (Expo config — top-level `version`, `ios.buildNumber`,
-     `android.versionCode`)
-   - iOS `Info.plist` (`CFBundleShortVersionString` +
-     `CFBundleVersion`)
-   - Android `build.gradle` (`versionCode` increment + `versionName`)
+2. ✅ **Version bumps** (Steve handled). Shipped in `00c1e96`.
+   Final values:
+   - `package.json` `version`: `1.0.3` → `2.0.0`
+   - `app.json` `version`: `1.0.3` → `2.0.0`,
+     `ios.buildNumber`: `7` → `8`,
+     `android.versionCode`: `4` → `5`
+   - `ios/MatchMaestro/Info.plist`:
+     `CFBundleShortVersionString` `1.0.3` → `2.0.0`,
+     `CFBundleVersion` `7` → `8`
+   - `ios/MatchMaestro.xcodeproj/project.pbxproj`:
+     `CURRENT_PROJECT_VERSION` `1` → `8` (Xcode regenerated on
+     edit — synced with the new CFBundleVersion)
+   - `android/app/build.gradle`: `versionCode` `4` → `5`,
+     `versionName` `"1.0.3"` → `"2.0.0"`
 3. ⏭️ **Real-device testing.** Everything verified to date is on
    iOS Simulator (iPhone Air + iPad Pro 11"). Test on:
    - Physical iPhone — confirm Liquid Glass renders correctly on
@@ -919,9 +930,9 @@ real-device QA, store submission.
 
 ### Afternoon + evening session — 2026-05-10 (Phases 6 + 8 + polish + Phase 10 kickoff)
 
-- **13 commits** total (8 implementation + 3 polish + 1 doc sync
-  + 1 Phase 10 light-mode drop), all pushed to GitHub by end of
-  session
+- **15 commits** total (8 implementation + 3 polish + 2 doc syncs
+  + 1 Phase 10 light-mode drop + 1 version-bump chore), all
+  pushed to GitHub by end of session
 - **Phases completed:** 6 (all five items) + 8 (all four items) +
   three polish iterations addressing layout bugs and UX feedback
 - **Files added:** `screens/PauseOverlay.js`, `screens/LevelUpToast.js`
@@ -943,14 +954,16 @@ real-device QA, store submission.
   pointed at https://matchmaestro.app for cross-platform redirect
 - **Net code delta over the day:** +1180 / −350 lines (plus the
   HighScoresModal removal pruning 168 lines on its own)
-- **Phase 10 kickoff:** light mode dropped tonight. Remaining
-  Phase 10 work: version bumps (Steve), real-device testing,
-  AdMob + RevenueCat sandbox testing, App Store / Play Console
-  metadata + screenshots, EAS Android production build, Xcode
-  iOS Archive, submissions. Division of labor documented in
-  the Phase 10 plan above.
+- **Phase 10 kickoff:** light mode dropped + version bumped to
+  2.0.0 across all four platform config surfaces (Steve handled
+  the version edits in parallel with the light-mode refactor).
+  Remaining Phase 10 work: real-device testing, AdMob +
+  RevenueCat sandbox testing, App Store / Play Console metadata
+  + screenshots, EAS Android production build, Xcode iOS
+  Archive, submissions. Division of labor documented in the
+  Phase 10 plan above.
 - **2.0 status:** all gameplay-shaping work complete and shipped
-  to origin/main. Phase 10 in progress.
+  to origin/main. Phase 10 steps 1–2 of 9 done; 3–9 remain.
 
 ### Morning session — 2026-05-10 (Phases 4, 3, polish)
 
