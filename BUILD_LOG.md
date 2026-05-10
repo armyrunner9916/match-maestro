@@ -10,12 +10,13 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `6444321 Phase 4: Modes config — pure logic for Easy/Normal/Hard/Challenge`
+**Last commit:** `91b1fbc Phase 3: Mode select screen — Liquid Glass aesthetic`
 **Working tree:** clean, all commits pushed
 **App state:** builds and runs on iOS simulator (iPhone Air + iPad Pro
-11-inch verified). Mode logic now exists end-to-end but only `normal` is
-reachable from the UI; Phase 3 (mode select) will surface Easy/Hard/
-Challenge and bring the dominant Liquid Glass aesthetic.
+11-inch verified). All four modes are now selectable from the new
+ModeSelectScreen; the Liquid Glass aesthetic dominates the home screen.
+Game flow: tap mode tile → play that mode → game over → main menu
+(returns to mode select).
 
 ### Commits so far (oldest → newest)
 
@@ -31,6 +32,8 @@ ce131b2 Phase 7: Settings refresh — SVG picker + Liquid Glass
 8a674d9 ios: lock iPad to portrait orientation
 9dd687e docs: update BUILD_LOG with Phase 2, Phase 7, and orientation lock
 6444321 Phase 4: Modes config — pure logic for Easy/Normal/Hard/Challenge
+70b07da docs: update BUILD_LOG for Phase 4
+91b1fbc Phase 3: Mode select screen — Liquid Glass aesthetic
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -49,10 +52,9 @@ phases done in the order that minimizes rework, not in numerical order:
 2. ✅ **Phase 2** — SVG card backs
 3. ✅ **Phase 7** — settings refresh (uses Phase 2 card backs)
 4. ✅ **Phase 4** — modes config (pure logic)
-5. ⏭️ **Phase 3** — mode select screen (consumes Phase 4) — *Liquid
-   Glass becomes the dominant aesthetic of the app here* ← **NEXT**
-6. ⏭️ **Phase 6 + 8** — in-game UX + game over redesign
-7. ⏭️ **Phase 5** — Daily Challenge (last; deferrable to 2.1)
+5. ✅ **Phase 3** — mode select screen (consumes Phase 4)
+6. ⏭️ **Phase 6 + 8** — in-game UX + game over redesign ← **NEXT**
+7. ❌ **Phase 5** — Daily Challenge — *cut from 2.0; revisit post-launch*
 8. ⏭️ **Phase 10** — QA + ship
 
 ---
@@ -201,6 +203,53 @@ behavior is preserved verbatim until Phase 3 wires the mode-select UI.
   `endGame('completed')` for the Easy levelCap path, and useCallback
   closes over its deps at render time, so endGame must be in scope.
 
+### Phase 3 — Mode select screen ✅
+
+`LandingScreen.js` deleted; `ModeSelectScreen.js` is the new home screen.
+Liquid Glass becomes the dominant aesthetic, as planned. Default mode
+flow: tap a mode tile → play that mode → game over → "Main Menu" →
+returns to ModeSelectScreen with name + last selected mode preserved.
+
+| Mode | Tint | Hint shown on tile |
+|---|---|---|
+| Easy | Green `#10b981` | 10 levels |
+| Normal | Amber `#f59e0b` | Classic |
+| Hard | Red `#ef4444` | −2s per miss |
+| Challenge | Purple `#9333ea` | 1 mistake / level |
+
+- **3.1 ModeSelectScreen layout** — Compact header (sun/moon emoji
+  button | banner | gear emoji button), name input, 2×2 mode grid,
+  full-width High Scores GlassButton, generous gap, then Remove Ads +
+  Restore Purchases grouped together. Premium players see a "✨
+  Premium — No Ads" badge in place of the ad-removal block.
+- **3.2 Mode tile design** — `Pressable` wrapping `GlassCard` with
+  three children: 4px colored top accent bar, mode label in the brand
+  tint, white-alpha hint, white-alpha-dim per-mode stat. Glass surface
+  stays neutral (no `tintColor` passed) — same-color text on
+  same-color glass washes out. Pressed state: 3% scale-down + 8%
+  opacity drop.
+- **3.3 Per-mode stat formatting** —
+  - Easy not-completed: `"Not yet completed"`
+  - Easy completed: `"✓ Completed (N misses)"` (or `(1 miss)` singular)
+  - Normal/Hard/Challenge with bestLevel=0: `"No runs yet"`
+  - Else: `"Best: Level N"`
+- **3.4 Brand colors centralized** — `tint` field on each `MODES`
+  entry; `COLORS.bgNavy = '#0a1228'` in `constants.js` shared across
+  ModeSelectScreen, GameScreen, GameOverScreen.
+- **3.5 Banner shrunk** — 120 → 90px (75% of pre-Phase-3) so the 2×2
+  grid fits without scrolling on iPhone Air. Survives intact at iPad
+  scale.
+- **Android safe-area fix** — `paddingTop: Platform.OS === 'android' ?
+  StatusBar.currentHeight : 0` rolled into ModeSelectScreen,
+  GameScreen, and GameOverScreen at the same time. Closes the
+  long-standing top-row-under-status-bar bug.
+- **Light mode caveat** — Phase 3 didn't redesign the light-mode
+  palette. White-on-light text is unreadable in the new layout. Two
+  options for resolution: drop the dark/light toggle entirely (every
+  screen already assumes dark via Liquid Glass), or build a real
+  light-mode pass. Decision deferred to Phase 6/8 or a dedicated
+  pass — for now, recommend testing dark only.
+
 ### iPad portrait lock ✅
 
 `UISupportedInterfaceOrientations~ipad` was retaining all four
@@ -266,32 +315,66 @@ Maestro's UX is vertical-first.
     `mistakeBudget: 1` means one free mistake; the second ends the
     run. Per-level counter resets on level advance. Spec wording
     ("end on the second mistake") confirmed this reading.
+14. **Brand color set finalized in Phase 3** — Easy=green, Normal=amber,
+    Hard=red, Challenge=purple. The Phase 3 first-draft proposal
+    (Easy/green, Normal/blue, Hard/amber, Challenge/purple) was
+    overruled in favor of brand consistency. These tints live as
+    `tint` fields on each `MODES` entry; consumers (ModeSelectScreen
+    today, in-game header tomorrow) read from there, never hardcode.
+15. **Mode tile glass stays neutral** — the brand tint shows in the
+    accent bar + label only, not as `tintColor` on the GlassCard.
+    Same-color text on same-color glass washes out; this gives clean
+    separation between the surface (neutral glass) and the brand
+    signal (color).
+16. **Daily Challenge cut from 2.0** — Phase 5 marked ❌. Will revisit
+    post-launch if the feature still seems valuable. Mode tile slot
+    stays at 2×2; if Daily Challenge ever ships, it gets its own
+    surface (probably a top banner above the 2×2) rather than
+    cramming into the grid.
+17. **Light mode left unaddressed in Phase 3** — the new layout assumes
+    a dark background everywhere (Liquid Glass renders against dark).
+    The dark/light toggle still works but light mode is visually
+    broken. Decision pending: drop the toggle entirely or build a
+    real light-mode pass.
+18. **Worktree branch caught us once** — Phase 3 first iteration was
+    invisible to the user's Xcode workspace because Xcode opened the
+    main checkout while all my work lived on the
+    `claude/flamboyant-kare-99369b` worktree branch. Phase 4
+    "smoke test" had silently passed the same way (normal-mode
+    behavior is identical between old and new code). Lesson: any
+    visible UI change MUST be merged to main before user testing,
+    or the user must explicitly open the worktree's `.xcworkspace`.
 
 ---
 
-## Next: Phase 3 — Mode select screen
+## Next: Phase 6 + 8 — In-game UX + Game Over redesign
 
-Visible UI consuming Phase 4's MODES config. The Liquid Glass aesthetic
-becomes the dominant visual language of the app here, replacing the
-current LandingScreen with a mode-select grid (Easy / Normal / Hard /
-Challenge cards).
+Two phases tackled together because they touch the same screens
+(GameScreen + GameOverScreen) and would step on each other if split.
 
-### Phase 3 work plan (high level — flesh out at start of session)
+**Phase 6 — In-game UX:**
+- 6.1 GlassPanel header showing level, mode (with tint), timer (or
+  mistakes-remaining for Challenge mode), and current matched pairs.
+- 6.2 Replace "Give Up" with a Pause overlay (resume / quit to mode
+  select).
+- 6.3 Level-up celebration animation between levels.
+- 6.4 State split: `levelReached` + `pairsMatchedInLevel` instead
+  of overloaded `completedLevel`. Closes Phase 9.1 deferred item.
+- 6.5 Card flip animation (`rotateY` interpolated transform).
 
-1. Replace `LandingScreen.js` with `ModeSelectScreen.js` (or rename
-   in place). Four `GlassCard` mode tiles in a 2×2 grid, each showing
-   the mode label + a one-line difficulty hint + the per-mode stat
-   from `modeStats` (best level / Easy completion badge).
-2. Tap on a mode card calls `startGame(modeId)` — already wired in
-   App.js (Phase 4 gave `startGame` the `modeId` arg).
-3. Move dark-mode + sound icons from the in-game header into the
-   mode-select header (Phase 7.4 deferred).
-4. Apply Taplight's Android safe-area pattern to the new screen's
-   outer container (see Known Issues below). Roll the same fix into
-   every other screen at the same time, not just mode select.
-5. After Phase 3 ships, the legacy top-10 highScores array becomes
-   redundant (modeStats covers all displayed data). Decide whether
-   to drop the dual-write in Phase 3 or wait for Phase 8.
+**Phase 8 — Game Over redesign:**
+- 8.1 Per-mode-aware Game Over variants:
+  - Timeout / Mistake-out → "Game Over! Reached Level X"
+  - Easy completion → 🎉 celebration screen with mismatch count
+  - Give-up → muted "See you next time"
+- 8.2 "🎉 New high score!" callout when modeStats[mode].bestLevel
+  was just exceeded.
+- 8.3 Share button (Normal/Hard/Challenge only — Easy completion
+  has its own share variant). Skip Daily Challenge — feature cut.
+- 8.4 GlassPanel + GlassButton throughout, matching ModeSelectScreen.
+
+After 6 + 8, only Phase 10 (QA + ship) remains. Light-mode decision
+should land somewhere in here too.
 
 ---
 
