@@ -5,7 +5,7 @@ import mobileAds from 'react-native-google-mobile-ads';
 import Purchases from 'react-native-purchases';
 
 import { SYMBOLS, REVENUECAT_API_KEYS } from './game/constants';
-import { MODES, DEFAULT_MODE } from './game/modes';
+import { MODES, DEFAULT_MODE, isValidMode } from './game/modes';
 import {
   loadAllData,
   migrateLegacyStorage,
@@ -331,15 +331,20 @@ export default function App() {
   };
 
   // Start a new game from the landing screen. Phase 4: caller can specify
-  // a mode; defaults to whatever mode is currently selected (Phase 3 will
-  // wire mode selection into the UI). Pulls level-1 settings from MODES.
-  const startGame = (modeId = mode) => {
+  // a mode; defaults to whatever mode is currently selected. Pulls level-1
+  // settings from MODES. Defensive guard: when a callsite passes startGame
+  // directly as a Pressable's onPress handler (e.g. GameOverScreen's
+  // "New Game"), React invokes it with the synthetic event object as the
+  // first arg — `MODES[<event>]` is undefined and crashes. Validate and
+  // fall back to current `mode` state for any non-string / unknown id.
+  const startGame = (modeId) => {
     if (!playerName.trim()) {
       Alert.alert('Name Required', 'Please enter your name!');
       return;
     }
-    const cfg = MODES[modeId];
-    setMode(modeId);
+    const id = isValidMode(modeId) ? modeId : mode;
+    const cfg = MODES[id];
+    setMode(id);
     setGameState('playing');
     setLevel(1);
     setPairs(cfg.pairsStart);
@@ -648,7 +653,7 @@ export default function App() {
         <GameOverScreen
           darkMode={darkMode}
           level={level}
-          onNewGame={startGame}
+          onNewGame={() => startGame(mode)}
           onMainMenu={() => setGameState('landing')}
           onViewHighScores={() => {
             setShowHighScores(true);
