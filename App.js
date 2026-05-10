@@ -5,12 +5,14 @@ import mobileAds from 'react-native-google-mobile-ads';
 import Purchases from 'react-native-purchases';
 
 import { SYMBOLS, REVENUECAT_API_KEYS } from './game/constants';
+import { MODES, DEFAULT_MODE } from './game/modes';
 import {
   loadAllData,
   migrateLegacyStorage,
   saveSettings as persistSettings,
   saveHighScores as persistHighScores,
   savePremium as persistPremium,
+  saveModeStats as persistModeStats,
 } from './game/storage';
 
 import LandingScreen from './screens/LandingScreen';
@@ -75,15 +77,29 @@ export default function App() {
   // Game state
   const [gameState, setGameState] = useState('landing');
   const [playerName, setPlayerName] = useState('');
+  const [mode, setMode] = useState(DEFAULT_MODE);
   const [level, setLevel] = useState(1);
-  const [pairs, setPairs] = useState(2);
-  const [timeLimit, setTimeLimit] = useState(15);
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [pairs, setPairs] = useState(MODES[DEFAULT_MODE].pairsStart);
+  const [timeLimit, setTimeLimit] = useState(MODES[DEFAULT_MODE].timerStart);
+  const [timeLeft, setTimeLeft] = useState(MODES[DEFAULT_MODE].timerStart);
   const [cards, setCards] = useState([]);
   const [flippedCards, setFlippedCards] = useState([]);
   const [matchedPairs, setMatchedPairs] = useState([]);
   const [completedLevel, setCompletedLevel] = useState(0);
   const [isProcessingMatch, setIsProcessingMatch] = useState(false);
+
+  // Phase 4 mode-aware run state. Reset by startGame; consumed by endGame
+  // and the modeStats persistence.
+  //   totalMismatches    — cumulative mismatches across the whole run.
+  //                        Tie-breaker for Easy mode "completed" badge.
+  //   mistakesThisLevel  — Challenge mode per-level counter; resets in
+  //                        nextLevel. Run ends when this exceeds the mode's
+  //                        mistakeBudget.
+  //   gameOutcome        — 'timeout' | 'completed' | 'mistakes' | 'gaveUp'.
+  //                        Phase 8 will surface this in the Game Over UI.
+  const [totalMismatches, setTotalMismatches] = useState(0);
+  const [mistakesThisLevel, setMistakesThisLevel] = useState(0);
+  const [gameOutcome, setGameOutcome] = useState(null);
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -92,6 +108,17 @@ export default function App() {
   const [showHighScores, setShowHighScores] = useState(false);
   const [highScores, setHighScores] = useState([]);
   const [hapticEnabled, setHapticEnabled] = useState(true);
+
+  // Phase 4: per-mode stats (best level / completion). Lives alongside the
+  // legacy `highScores` array; both are written on game end during the
+  // transition. HighScoresModal still consumes the legacy array. Phase 3/8
+  // will replace that consumer and we can drop the dual write.
+  const [modeStats, setModeStats] = useState({
+    easy: { completed: false, fewestMismatches: null },
+    normal: { bestLevel: 0 },
+    hard: { bestLevel: 0 },
+    challenge: { bestLevel: 0 },
+  });
 
   // Premium / RevenueCat state
   const [isPremium, setIsPremium] = useState(false);
@@ -212,10 +239,15 @@ export default function App() {
       // namespace before reading. Idempotent — no-ops on subsequent launches.
       await migrateLegacyStorage();
 
-      const { highScores: savedScores, settings: savedSettings, isPremium: savedPremium } =
-        await loadAllData();
+      const {
+        highScores: savedScores,
+        settings: savedSettings,
+        isPremium: savedPremium,
+        modeStats: savedModeStats,
+      } = await loadAllData();
 
       if (savedScores) setHighScores(savedScores);
+      if (savedModeStats) setModeStats(savedModeStats);
 
       if (savedSettings) {
         setDarkMode(savedSettings.darkMode ?? true);
@@ -256,19 +288,22 @@ export default function App() {
 
   // Timer effect. 9.8: paused while a match is being evaluated so a player
   // who taps the last pair just before time-out can't be robbed of credit by
-  // the 600ms resolution delay racing the 1s timer tick.
+  // the 600ms resolution delay racing the 1s timer tick. Phase 4: a `null`
+  // timeLimit (Challenge mode) suppresses the clock entirely.
   useEffect(() => {
+    if (timeLimit === null) return;
+
     let timer;
     if (gameState === 'playing' && timeLeft > 0 && !isProcessingMatch) {
       timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (timeLeft === 0 && gameState === 'playing' && !isProcessingMatch) {
-      endGame();
+      endGame('timeout');
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [timeLeft, gameState, isProcessingMatch]);
+  }, [timeLeft, gameState, isProcessingMatch, timeLimit]);
 
   // Build a fresh shuffled deck of `pairCount` pairs.
   const initializeCards = (pairCount = pairs) => {
@@ -283,32 +318,108 @@ export default function App() {
     }));
   };
 
-  // Start a new game from the landing screen.
-  const startGame = () => {
+  // Start a new game from the landing screen. Phase 4: caller can specify
+  // a mode; defaults to whatever mode is currently selected (Phase 3 will
+  // wire mode selection into the UI). Pulls level-1 settings from MODES.
+  const startGame = (modeId = mode) => {
     if (!playerName.trim()) {
       Alert.alert('Name Required', 'Please enter your name!');
       return;
     }
+    const cfg = MODES[modeId];
+    setMode(modeId);
     setGameState('playing');
     setLevel(1);
-    setPairs(2);
-    setTimeLimit(15);
-    setTimeLeft(15);
+    setPairs(cfg.pairsStart);
+    setTimeLimit(cfg.timerStart);
+    setTimeLeft(cfg.timerStart);
     setMatchedPairs([]);
     setFlippedCards([]);
-    setCards(initializeCards(2));
+    setCards(initializeCards(cfg.pairsStart));
     setCompletedLevel(0);
     setIsProcessingMatch(false);
+    setTotalMismatches(0);
+    setMistakesThisLevel(0);
+    setGameOutcome(null);
     triggerHaptic('impact');
   };
+
+  // End the current game and persist score if it qualifies. Phase 4: takes
+  // an outcome ('timeout' | 'completed' | 'mistakes' | 'gaveUp') and writes
+  // per-mode stats alongside the legacy top-10 array.
+  //
+  // Defined before nextLevel because nextLevel calls endGame for the Easy
+  // mode levelCap completion path, and useCallback closes over its deps at
+  // render time — referencing endGame from nextLevel's deps requires endGame
+  // to be in scope already.
+  const endGame = useCallback((outcome = 'timeout') => {
+    setGameState('gameOver');
+    setGameOutcome(outcome);
+    triggerHaptic('error');
+
+    // Legacy top-10 array — kept for HighScoresModal until Phase 3/8
+    // replaces that consumer. Same logic as before.
+    if (completedLevel > 0) {
+      const newScore = {
+        name: playerName,
+        level: completedLevel,
+        date: new Date().toISOString(),
+      };
+
+      const updatedScores = [newScore, ...highScores]
+        .sort((a, b) => b.level - a.level)
+        .slice(0, 10);
+      setHighScores(updatedScores);
+      persistHighScores(updatedScores);
+    }
+
+    // Per-mode stats. Easy tracks completion + tie-breaker; the others
+    // track best level reached. Only update when there's something to
+    // record (completedLevel > 0 OR an Easy completion).
+    const isEasyCompletion = mode === 'easy' && outcome === 'completed';
+    if (completedLevel > 0 || isEasyCompletion) {
+      const next = { ...modeStats };
+
+      if (mode === 'easy') {
+        const prev = next.easy || { completed: false, fewestMismatches: null };
+        const completed = prev.completed || isEasyCompletion;
+        let fewestMismatches = prev.fewestMismatches;
+        if (isEasyCompletion) {
+          fewestMismatches =
+            fewestMismatches === null
+              ? totalMismatches
+              : Math.min(fewestMismatches, totalMismatches);
+        }
+        next.easy = { completed, fewestMismatches };
+      } else {
+        const prevBest = next[mode]?.bestLevel ?? 0;
+        next[mode] = { bestLevel: Math.max(prevBest, completedLevel) };
+      }
+
+      setModeStats(next);
+      persistModeStats(next);
+    }
+  }, [mode, completedLevel, playerName, highScores, modeStats, totalMismatches, triggerHaptic]);
 
   // Advance to the next level. Phase 6.4 / 9.1 will fix the `completedLevel`
   // semantic — it currently records the level entered, not the level finished.
   // Declared before handleCardPress so the latter can list it in its deps.
+  // Phase 4: pulls timer/pair deltas from MODES[mode], honors levelCap by
+  // ending the run with outcome 'completed' once the cap is cleared.
   const nextLevel = useCallback(() => {
+    const cfg = MODES[mode];
+
+    // Easy mode: completing the cap level ends the run with a "completed"
+    // outcome instead of advancing. Phase 8 will surface a celebration UI.
+    if (cfg.levelCap !== null && level >= cfg.levelCap) {
+      endGame('completed');
+      return;
+    }
+
     const newLevel = level + 1;
     const newPairs = Math.min(pairs + 1, SYMBOLS.length);
-    const newTimeLimit = timeLimit + 3;
+    const newTimeLimit =
+      cfg.timerStart === null ? null : timeLimit + cfg.timerDelta;
 
     setLevel(newLevel);
     setPairs(newPairs);
@@ -318,8 +429,9 @@ export default function App() {
     setFlippedCards([]);
     setCards(initializeCards(newPairs));
     setCompletedLevel(newLevel);
+    setMistakesThisLevel(0); // Challenge mode: per-level counter resets
     triggerHaptic('success');
-  }, [level, pairs, timeLimit, triggerHaptic]);
+  }, [mode, level, pairs, timeLimit, triggerHaptic, endGame]);
 
   // Handle a card tap during gameplay.
   const handleCardPress = useCallback((cardId) => {
@@ -368,8 +480,26 @@ export default function App() {
             nextLevel();
           }
         } else {
+          // Mismatch. Phase 4 layers three mode-specific effects on top of
+          // the existing flip-back: cumulative mismatch tally, Hard mode
+          // timer penalty, Challenge mode mistake-budget exhaustion.
+          const cfg = MODES[mode];
           setFlippedCards([]);
+          setTotalMismatches(prev => prev + 1);
           triggerHaptic('error');
+
+          if (cfg.mismatchPenalty > 0 && timeLimit !== null) {
+            setTimeLeft(prev => Math.max(0, prev - cfg.mismatchPenalty));
+          }
+
+          if (cfg.mistakeBudget !== null) {
+            const newMistakes = mistakesThisLevel + 1;
+            setMistakesThisLevel(newMistakes);
+            // Budget = N free mistakes per level; the (N+1)th ends the run.
+            if (newMistakes > cfg.mistakeBudget) {
+              endGame('mistakes');
+            }
+          }
         }
         setIsProcessingMatch(false);
       }, 600);
@@ -377,28 +507,9 @@ export default function App() {
   }, [
     gameState, cards, flippedCards, matchedPairs, pairs,
     isProcessingMatch, triggerHaptic,
+    mode, timeLimit, mistakesThisLevel, endGame,
     nextLevel, // 9.6: nextLevel was missing from deps — caused stale level-up
   ]);
-
-  // End the current game and persist score if it qualifies.
-  const endGame = useCallback(() => {
-    setGameState('gameOver');
-    triggerHaptic('error');
-
-    if (completedLevel > 0) {
-      const newScore = {
-        name: playerName,
-        level: completedLevel,
-        date: new Date().toISOString(),
-      };
-
-      const updatedScores = [newScore, ...highScores]
-        .sort((a, b) => b.level - a.level)
-        .slice(0, 10);
-      setHighScores(updatedScores);
-      persistHighScores(updatedScores);
-    }
-  }, [completedLevel, playerName, highScores, triggerHaptic]);
 
   // --- Render ---------------------------------------------------------------
 
@@ -460,13 +571,14 @@ export default function App() {
           darkMode={darkMode}
           level={level}
           timeLeft={timeLeft}
+          hasTimer={timeLimit !== null}
           cards={cards}
           flippedCards={flippedCards}
           cardSize={cardSize}
           cardBackColor={cardBackColor}
           isPremium={isPremium}
           onCardPress={handleCardPress}
-          onEndGame={endGame}
+          onEndGame={() => endGame('gaveUp')}
         />
         {modals}
       </>

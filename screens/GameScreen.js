@@ -18,6 +18,7 @@ function GameScreen({
   darkMode,
   level,
   timeLeft,
+  hasTimer = true,
   cards,
   flippedCards,
   cardSize,
@@ -44,13 +45,20 @@ function GameScreen({
               >
                 Level: {level}
               </Text>
-              <Text
-                style={[styles.timer, { color: darkMode ? '#ffffff' : '#000000', flex: 1, textAlign: 'center' }]}
-                accessibilityLabel={`Time remaining: ${timeLeft} seconds`}
-                accessibilityLiveRegion="polite"
-              >
-                Time: {timeLeft}s
-              </Text>
+              {hasTimer ? (
+                <Text
+                  style={[styles.timer, { color: darkMode ? '#ffffff' : '#000000', flex: 1, textAlign: 'center' }]}
+                  accessibilityLabel={`Time remaining: ${timeLeft} seconds`}
+                  accessibilityLiveRegion="polite"
+                >
+                  Time: {timeLeft}s
+                </Text>
+              ) : (
+                // Phase 4: Challenge mode runs without a clock. Phase 3 will
+                // replace this row with a per-mode header that surfaces
+                // mistakes-remaining instead of seconds.
+                <View style={{ flex: 1 }} />
+              )}
               <TouchableOpacity
                 style={styles.giveUpButton}
                 onPress={onEndGame}

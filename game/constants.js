@@ -27,6 +27,9 @@ export const STORAGE_KEYS = {
   highScores: 'matchMaestro:highScores',
   settings: 'matchMaestro:settings',
   premium: 'matchMaestro:premium',
+  // Phase 4: per-mode stats. Lives alongside the legacy top-10 array;
+  // the array stays for HighScoresModal until Phase 3/8 redesigns the UI.
+  modeStats: 'matchMaestro:modeStats',
 };
 
 // Legacy 1.x keys. Read once on first launch by migrateLegacyStorage(),
@@ -40,4 +43,4 @@ export const LEGACY_STORAGE_KEYS = {
 // Bump this when adding a new migration step so users on every prior
 // version migrate forward exactly once.
 export const STORAGE_MIGRATION_FLAG = 'matchMaestro:migrated';
-export const STORAGE_MIGRATION_VERSION = 'v2';
+export const STORAGE_MIGRATION_VERSION = 'v3';
