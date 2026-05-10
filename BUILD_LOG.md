@@ -10,20 +10,19 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `a63c487 Phase 3 polish: Challenge mistakeBudget tuned to (pairs - 1)`
-**Working tree:** clean, all commits pushed
-**App state:** builds and runs on iOS simulator (iPhone Air + iPad Pro
-11-inch verified). All four modes are selectable from the new
-ModeSelectScreen; Liquid Glass aesthetic dominates the home screen.
-Mode tile colors match Numlok's brand palette (Material 500s) so the
-two apps share visual DNA. Hard and Challenge gameplay both retuned
-through multiple iterations to land at "challenging-but-fair". Phase
-3 + 4 ship complete; the Game Over screen still wears the pre-Phase-8
-flat layout (intentional — the Liquid Glass treatment lands as part
-of Phase 8).
+**Last commit:** `d558343 Phase 6.5: rotateY card flip animation`
+**Working tree:** clean (local — push pending)
+**App state:** Phase 6 + 8 complete. End-to-end gameplay loop is now
+Liquid Glass throughout — mode select, in-game header, pause, level-up
+celebration, game over. Card flips animate. Game Over screen is
+per-mode-aware (timeout / mistakes / gaveUp / Easy completion variants)
+with a "🎉 New high score!" callout and a native Share button pointed
+at `https://matchmaestro.app`. Only Phase 10 (QA + ship) and the
+light-mode decision remain on the 2.0 roadmap.
 
-Game flow: tap mode tile → play that mode → game over → main menu
-(returns to mode select).
+Game flow: tap mode tile → play that mode → level-up toast between
+levels → game over variant matches outcome → main menu (returns to
+mode select).
 
 ### Commits so far (oldest → newest)
 
@@ -49,6 +48,14 @@ f5c72be Phase 3 polish: gameplay tuning + UI nits
 7c6a456 Phase 3 polish: Challenge mode mistake counter + budget tweak
 f90bf75 Phase 3 polish: Challenge mode locks first flip
 a63c487 Phase 3 polish: Challenge mistakeBudget tuned to (pairs - 1)
+4c8b35f docs: sync BUILD_LOG with Phase 3 polish iterations
+33a49cc Phase 6.4: completedLevel → levelReached (semantic fix)
+4986402 Phase 6.1 + 6.2: GlassPanel header + Pause overlay
+a9a6999 Fix: New Game button on GameOverScreen crashed startGame
+d047f10 Phase 6.1 fix: status panel content stays on one row
+1fc61cd Phase 8: Game Over redesign — per-mode-aware Liquid Glass variants
+10bcdab Phase 6.3: Level-up celebration toast
+d558343 Phase 6.5: rotateY card flip animation
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -68,9 +75,9 @@ phases done in the order that minimizes rework, not in numerical order:
 3. ✅ **Phase 7** — settings refresh (uses Phase 2 card backs)
 4. ✅ **Phase 4** — modes config (pure logic)
 5. ✅ **Phase 3** — mode select screen (consumes Phase 4)
-6. ⏭️ **Phase 6 + 8** — in-game UX + game over redesign ← **NEXT**
+6. ✅ **Phase 6 + 8** — in-game UX + game over redesign
 7. ❌ **Phase 5** — Daily Challenge — *cut from 2.0; revisit post-launch*
-8. ⏭️ **Phase 10** — QA + ship
+8. ⏭️ **Phase 10** — QA + ship ← **NEXT** (also: light-mode decision)
 
 ---
 
@@ -341,6 +348,115 @@ and why:
    (`pairs - 3` → `pairs + 1` → `pairs - 1`) bracketed the sweet
    spot.
 
+### Phase 6 — In-game UX ✅
+
+The gameplay screens now match the Liquid Glass aesthetic of the home
+screen. Five items, all shipped.
+
+- **6.1 GlassPanel status header** — Replaces the old
+  `[Level: X | Time: Ys | Give Up]` row with a tinted glass strip:
+  `[MODE]·Level N·{time-or-misses}`. Mode label in brand tint at 14pt
+  weight 800 all-caps; level/timer/misses in white 14pt 600; mid-dot
+  dividers in 0.45 white. Challenge mode swaps "16s" for "Misses left:
+  N" automatically (driven by `hasTimer` + `mistakesLeft` props).
+  Layout iteration: first cut had `flexWrap:'wrap'` which broke the
+  panel onto two lines on tight phones; removed, with padding and
+  font tightened to give safe margin on iPhone SE.
+- **6.2 Pause overlay** — Replaces the red "Give Up" button with a ⏸
+  icon GlassButton. Tapping opens `PauseOverlay` — a centered
+  GlassPanel modal with `Resume` (cyan) and `Quit` (red) buttons. Quit
+  fires the same `gaveUp` outcome the old Give Up did. Backdrop tap
+  also resumes (forgiving — accidental pauses don't force button
+  targeting). Timer + card taps gated on `!isPaused` so the clock
+  truly halts while paused. Single unified mechanic across all four
+  modes (no Easy-only fork).
+- **6.3 Level-up celebration toast** — `LevelUpToast` component:
+  centered mode-tinted "Level N" pulse, Animated opacity (180ms fade
+  in → 450ms hold → 220ms fade out, 850ms total) + spring on scale
+  (0.88 → 1) for a pop-in feel. Driven by `levelUpToastLevel` state
+  in App.js. `isProcessingMatch` held true through the celebration so
+  the timer can't tick to zero during the 850ms (Hard could otherwise
+  eat a level completion at timeLeft=1). Easy levelCap path skips
+  the toast — Game Over's "🎉 You Did It!" variant celebrates that.
+- **6.4 State refactor: `completedLevel` → `levelReached`** — Closes
+  the Phase 9.1 deferred bug. Old field recorded "level entered"
+  (set to newLevel inside nextLevel), so dying on level 5 credited
+  the player with completing level 5 even though they only matched
+  a few pairs. `levelReached` now records "highest level the player
+  FINISHED" — set to `level` BEFORE the increment in nextLevel.
+  endGame takes an optional `explicitLevelReached` arg so the Easy
+  levelCap path can pass the freshly-set value without waiting for
+  state flush. Side effect: existing modeStats from the v3 migration
+  may be overstated by 1 (legacy semantic); not back-correcting.
+- **6.5 Card flip animation** — `rotateY` 0° → 180° with
+  `Easing.out(cubic)` over 200ms. Two Animated.Views stacked with
+  `backfaceVisibility:'hidden'`, both driven by a single Animated.Value
+  (0..1). Back rotates 0°→180°, front rotates 180°→360°, so at any
+  progress value exactly one face is camera-facing. `perspective: 800`
+  in each transform gives a real 3D arc rather than a flat horizontal
+  squash. Initial Animated.Value matches initial `showFace` so a
+  card mounting already face-up doesn't replay the animation.
+
+### Phase 8 — Game Over redesign ✅
+
+Per-mode-aware Liquid Glass treatment for the run-end screen. Four
+outcome variants share a GlassPanel card; title + accent + body line
+shift based on what ended the run. All buttons are GlassButtons,
+matching ModeSelectScreen and the Pause overlay.
+
+| Outcome | Title | Accent | Body | Share? |
+|---|---|---|---|---|
+| `timeout` | "Time's Up!" | red | "You reached Level N" | ✓ |
+| `mistakes` | "Out of Guesses" | red | "You reached Level N" | ✓ |
+| `gaveUp` | "See You Next Time" | gray | "You reached Level N" | — |
+| `completed` (Easy) | "🎉 You Did It!" | green | "Cleared in M misses" | ✓ |
+
+Easy completion also shows a `{Mode} Mode Complete` subtitle in the
+mode tint.
+
+- **8.1 Per-mode-aware variants** — `VARIANTS` constant in
+  GameOverScreen.js maps each outcome → {title, accentColor, showShare}.
+  Body text branches on `isEasyCompletion`. `gaveUp` is the only
+  variant that suppresses Share (sharing a give-up reads weird).
+- **8.2 "🎉 New high score!" callout** — Line in the mode tint
+  above the title, only rendered when `isNewHighScore` is true.
+  Computed in `endGame` against pre-update modeStats and stored in
+  new `isNewHighScore` App.js state:
+  - Normal/Hard/Challenge: `lr > previousBestLevel`
+  - Easy: first completion ever, OR fewer misses than previous best
+- **8.3 Share button** — React Native built-in `Share.share()`. Text:
+  - Easy: `I cleared Easy mode in N misses on Match Maestro! 🎴
+    https://matchmaestro.app`
+  - Others: `I reached Level N in {Mode} mode on Match Maestro! 🎴
+    https://matchmaestro.app`
+  - The matchmaestro.app redirect uses browser detection to route
+    iOS users to the App Store and Android users to Google Play.
+- **8.4 Full GlassPanel + GlassButton treatment** — Replaced the
+  flat dark card and TouchableOpacity buttons. 480px maxWidth caps
+  the panel on iPad. Three GlassButtons (Share / Play Again / Main
+  Menu); "View High Scores" dropped — reachable from mode select.
+
+### Phase 4 + Phase 6 bug fix — `New Game` crashed startGame ✅
+
+Phase 4 changed `startGame`'s signature from `()` to `(modeId = mode)`
+to support per-mode launching. The legacy LandingScreen called
+`startGame()` with no args so this worked. ModeSelectScreen wraps
+with explicit `onPress={() => onSelectMode(modeId)}` so that was
+fine too. But GameOverScreen had `onNewGame={startGame}` — when
+Pressable fires, React passes the synthetic event as the first arg,
+which became `modeId`. `MODES[<event>]` is undefined → cfg crash.
+Two-layer fix:
+
+- Defensive in `startGame`: validate the arg via `isValidMode()` and
+  fall back to current `mode` state for anything non-string or
+  unknown.
+- Boundary at the GameOverScreen callsite:
+  `onNewGame={() => startGame(mode)}` (now `onPlayAgain` post-8.4).
+
+Not caught earlier because the New Game path on Game Over wasn't
+exercised during Phase 4 smoke testing (ModeSelectScreen didn't
+exist yet — every start went through LandingScreen's `startGame()`).
+
 ### iPad portrait lock ✅
 
 `UISupportedInterfaceOrientations~ipad` was retaining all four
@@ -466,37 +582,85 @@ Maestro's UX is vertical-first.
     swap) vs full Phase 8 redesign with per-mode-aware variants
     later. User chose to wait for Phase 8 — keeps the redesign
     cohesive.
+24. **Phase 6.4 `pairsMatchedInLevel` field skipped** — the original
+    plan called for splitting `completedLevel` into `levelReached`
+    + `pairsMatchedInLevel`. Skipped the second field because
+    `matchedPairs.length` already serves that role — adding a
+    parallel state would have been redundant. Phase 6.1 header
+    intentionally drops the "Pairs: M/N" display (the visible
+    matched cards on the grid already show progress), so no consumer
+    needed it.
+25. **Pause unified across all modes (no Easy fork)** — when user
+    raised concern that Easy mode (no timer pressure) would need
+    a way out, considered keeping Give Up baked into Easy and using
+    Pause for the other three. Settled on a single unified Pause
+    mechanic with explicit `Resume` / `Quit` labels — the red Quit
+    button's destructive color is enough to signal "ends the run".
+    Cleaner: one mechanism in the codebase, no per-mode UI branching.
+26. **Level-up toast holds `isProcessingMatch` true** — initially
+    considered letting the timer continue ticking during the 850ms
+    celebration. But Hard mode with the −1s mismatch penalty could
+    land a player at timeLeft=1 right after clearing a level; the
+    timer effect would fire endGame('timeout') during the
+    celebration. Gating on `isProcessingMatch` (already used to
+    block taps during the 600ms match-resolution window) extends
+    naturally to cover the toast period too.
+27. **Card flip uses two stacked faces, not a face swap** — Phase
+    6.5 could have animated a single View's content swap (simpler
+    code) but that produces a "flicker through 90°" effect rather
+    than a real flip. The two-Animated.View + `backfaceVisibility`
+    recipe gives a proper 3D flip with `perspective: 800` for
+    depth. Slightly more code, much better feel.
+28. **Game Over `View High Scores` button dropped** — the old
+    GameOverScreen had three buttons (New Game / Main Menu / View
+    High Scores). Phase 8 dropped the high-scores access since the
+    new modeStats indicator on each mode tile (in ModeSelectScreen)
+    surfaces per-mode best inline. Returning to mode select shows
+    the relevant stat directly; the legacy top-10 array is still
+    reachable via the High Scores button there.
+29. **`isNewHighScore` computed against pre-update state** — the
+    high-score callout needs to know "did this run beat the
+    previous best?" not "is the current best record from this run?"
+    (which would always be true after we write modeStats). endGame
+    captures the comparison inline against the pre-mutation
+    modeStats snapshot, sets `isNewHighScore` state, then performs
+    the update.
 
 ---
 
-## Next: Phase 6 + 8 — In-game UX + Game Over redesign
+## Next: Phase 10 — QA + ship
 
-Two phases tackled together because they touch the same screens
-(GameScreen + GameOverScreen) and would step on each other if split.
+All gameplay-shaping phases are complete. What's left is the polish
+and verification path to a real 2.0 release.
 
-**Phase 6 — In-game UX:**
-- 6.1 GlassPanel header showing level, mode (with tint), timer (or
-  mistakes-remaining for Challenge mode), and current matched pairs.
-- 6.2 Replace "Give Up" with a Pause overlay (resume / quit to mode
-  select).
-- 6.3 Level-up celebration animation between levels.
-- 6.4 State split: `levelReached` + `pairsMatchedInLevel` instead
-  of overloaded `completedLevel`. Closes Phase 9.1 deferred item.
-- 6.5 Card flip animation (`rotateY` interpolated transform).
+**Phase 10 work plan (high-level — flesh out at start of session):**
 
-**Phase 8 — Game Over redesign:**
-- 8.1 Per-mode-aware Game Over variants:
-  - Timeout / Mistake-out → "Game Over! Reached Level X"
-  - Easy completion → 🎉 celebration screen with mismatch count
-  - Give-up → muted "See you next time"
-- 8.2 "🎉 New high score!" callout when modeStats[mode].bestLevel
-  was just exceeded.
-- 8.3 Share button (Normal/Hard/Challenge only — Easy completion
-  has its own share variant). Skip Daily Challenge — feature cut.
-- 8.4 GlassPanel + GlassButton throughout, matching ModeSelectScreen.
-
-After 6 + 8, only Phase 10 (QA + ship) remains. Light-mode decision
-should land somewhere in here too.
+1. **Light-mode decision.** The dark/light toggle still flips
+   background colors but most layouts and text styles assume dark.
+   Pick one: (a) drop the toggle entirely and remove `darkMode`
+   prop plumbing, (b) build a real light-mode pass with proper text
+   colors and Glass overlay tints. Option (a) is the smaller change.
+2. **Real-device testing.** Everything verified to date is on
+   iOS Simulator (iPhone Air + iPad Pro 11"). Test on:
+   - Physical iPhone (any model) — confirm Liquid Glass renders
+     correctly on real iOS 26
+   - Physical iPad — confirm 480px panel cap reads well at scale
+   - Physical Android phone — confirm safe-area fix landed,
+     LiquidGlass fallback bg looks OK
+   - Physical Android tablet — same checks
+3. **AdMob smoke test on real devices.** Test ads + Remove Ads
+   purchase flow on real devices (simulator can't run real ads).
+4. **RevenueCat purchase test.** Sandbox iOS test purchase →
+   verify entitlement → restore. Same on Android Play Console
+   internal testing.
+5. **Stale-state audit.** Comment cleanup pass — search for any
+   remaining `completedLevel` references (should only be in
+   historical comments), confirm Phase 9.1 deferred note is
+   removed from open issues.
+6. **Production build.** EAS build for both platforms, internal
+   distribution test, then submit.
+7. **Post-launch:** revisit Daily Challenge for 2.1 if signal is
+   good.
 
 ---
 
@@ -551,9 +715,9 @@ should land somewhere in here too.
 - A bunch of pre-migration warnings are now suppressed via
   `inhibit_all_warnings!` in the Podfile — that's intentional, not
   a code smell.
-- Phase 9.1 (`completedLevel` semantic) is the **only** Phase 9 item
-  intentionally still open. It will be resolved when Phase 6.4
-  splits state into `levelReached` + `pairsMatchedInLevel`.
+- **~~Phase 9.1 (`completedLevel` semantic)~~** — ✅ resolved by
+  Phase 6.4. Renamed to `levelReached` and the semantic now matches
+  the name (highest level finished, not entered).
 - The `darkMode` prop is currently unused inside `SettingsModal.js`
   (the Glass aesthetic is dark regardless). Plan calls for moving the
   dark-mode toggle into Settings during the Phase 3 work — leave the
@@ -589,6 +753,26 @@ should land somewhere in here too.
 - **Toolchain:** RevenueCat 7.13 → 9.15.2, Pods deployment target
   normalized, iPad portrait lock corrected
 - **GitHub:** repo created, all history pushed, Keychain configured
+
+### Afternoon session — 2026-05-10 (Phases 6 + 8)
+
+- **7 commits** landed locally (push pending)
+- **Phases completed:** 6 (all five items) + 8 (all four items)
+- **Files added:** `screens/PauseOverlay.js`, `screens/LevelUpToast.js`
+- **Files significantly rewritten:** `screens/GameScreen.js` (header
+  redesign), `screens/GameOverScreen.js` (per-mode variants + Liquid
+  Glass), `components/Card.js` (flip animation)
+- **New state in App.js:** `levelReached` (replaces `completedLevel`),
+  `isPaused`, `isNewHighScore`, `levelUpToastLevel`
+- **Closed bugs:** Phase 9.1 (`completedLevel` semantic), New Game
+  crash on Game Over (synthetic event leaking into `startGame(modeId)`)
+- **Animation work:** Animated.sequence for level-up toast (180/450/220
+  ms fade-in/hold/fade-out with spring on scale), rotateY card flip
+  (200ms cubic ease-out, two-face stack with backfaceVisibility)
+- **Share integration:** native `Share.share()` from React Native,
+  pointed at https://matchmaestro.app for cross-platform redirect
+- **2.0 status:** all gameplay-shaping work complete; only Phase 10
+  (QA + ship) and the light-mode decision remain.
 
 ### Morning session — 2026-05-10 (Phases 4, 3, polish)
 
