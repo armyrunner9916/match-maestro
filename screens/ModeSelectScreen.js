@@ -47,6 +47,10 @@ const formatModeStat = (modeId, modeStats) => {
   return best > 0 ? `Best: Level ${best}` : 'No runs yet';
 };
 
+// Tile = GlassCard wrapper + solid-color inner View at 85% alpha + white
+// text. Matches the Numlok mode-card styling so the two apps share visual
+// DNA. The 0.85 alpha lets the glass surface peek through subtly without
+// muddying the brand color.
 const ModeTile = ({ modeId, modeStats, onPress }) => {
   const cfg = MODES[modeId];
   return (
@@ -60,12 +64,9 @@ const ModeTile = ({ modeId, modeStats, onPress }) => {
       accessibilityLabel={`Start ${cfg.label} mode`}
       accessibilityHint={cfg.hint}
     >
-      {/* Glass surface stays neutral; the colored accent bar + label carry
-          the mode brand. Same-color tint + same-color text would wash out. */}
       <GlassCard style={styles.tile}>
-        <View style={[styles.tileAccent, { backgroundColor: cfg.tint }]} />
-        <View style={styles.tileContent}>
-          <Text style={[styles.tileLabel, { color: cfg.tint }]}>{cfg.label}</Text>
+        <View style={[styles.tileFill, { backgroundColor: cfg.tileBg }]}>
+          <Text style={styles.tileLabel}>{cfg.label}</Text>
           <Text style={styles.tileHint}>{cfg.hint}</Text>
           <Text style={styles.tileStat}>{formatModeStat(modeId, modeStats)}</Text>
         </View>
@@ -282,34 +283,29 @@ const styles = StyleSheet.create({
   },
   tile: {
     borderRadius: 16,
-    minHeight: 130,
+    minHeight: 140,
   },
-  tileAccent: {
-    height: 4,
-    width: '100%',
-    opacity: 0.85,
-  },
-  tileContent: {
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+  tileFill: {
     flex: 1,
-    justifyContent: 'space-between',
+    padding: 16,
+    justifyContent: 'flex-start',
   },
   tileLabel: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 0.3,
-    marginBottom: 6,
+    color: '#ffffff',
+    marginBottom: 4,
   },
   tileHint: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.78)',
-    marginBottom: 10,
+    fontSize: 14,
+    color: '#ffffff',
+    marginBottom: 4,
   },
   tileStat: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.9,
+    marginTop: 'auto',
   },
   // Bottom action area.
   actionButton: {

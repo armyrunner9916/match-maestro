@@ -14,12 +14,17 @@
 // Phase 3 will consume this for the mode-select UI; Phase 4 just threads
 // the values through gameplay. Adding a new mode = one entry here.
 
+// Brand colors match Numlok's mode palette (Material 500s) so cross-app
+// branding reads as the same designer's hand. `tint` is the solid hex for
+// labels/headers; `tileBg` is the same color at 85% alpha for tile fills
+// over a Liquid Glass surface.
 export const MODES = {
   easy: {
     id: 'easy',
     label: 'Easy',
     hint: '10 levels',
-    tint: '#10b981', // brand green
+    tint: '#4CAF50',
+    tileBg: 'rgba(76, 175, 80, 0.85)',
     pairsStart: 2,
     timerStart: 20,
     timerDelta: 5,
@@ -31,7 +36,8 @@ export const MODES = {
     id: 'normal',
     label: 'Normal',
     hint: 'Classic',
-    tint: '#f59e0b', // brand amber
+    tint: '#FFC107',
+    tileBg: 'rgba(255, 193, 7, 0.85)',
     pairsStart: 2,
     timerStart: 15,
     timerDelta: 3,
@@ -43,7 +49,8 @@ export const MODES = {
     id: 'hard',
     label: 'Hard',
     hint: '−2s per miss',
-    tint: '#ef4444', // brand red
+    tint: '#F44336',
+    tileBg: 'rgba(244, 67, 54, 0.85)',
     pairsStart: 4,
     timerStart: 12,
     timerDelta: 2,
@@ -55,7 +62,8 @@ export const MODES = {
     id: 'challenge',
     label: 'Challenge',
     hint: '1 mistake / level',
-    tint: '#9333ea', // brand purple
+    tint: '#9C27B0',
+    tileBg: 'rgba(156, 39, 176, 0.85)',
     pairsStart: 6,
     timerStart: null,
     timerDelta: 0,
