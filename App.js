@@ -493,10 +493,15 @@ export default function App() {
           }
 
           if (cfg.mistakeBudget !== null) {
+            // mistakeBudget can be a number OR a function of `pairs` so it
+            // can scale with level. Challenge mode uses the function form.
+            const budget = typeof cfg.mistakeBudget === 'function'
+              ? cfg.mistakeBudget(pairs)
+              : cfg.mistakeBudget;
             const newMistakes = mistakesThisLevel + 1;
             setMistakesThisLevel(newMistakes);
             // Budget = N free mistakes per level; the (N+1)th ends the run.
-            if (newMistakes > cfg.mistakeBudget) {
+            if (newMistakes > budget) {
               endGame('mistakes');
             }
           }

@@ -48,20 +48,20 @@ export const MODES = {
   hard: {
     id: 'hard',
     label: 'Hard',
-    hint: '−2s per miss',
+    hint: '−1s per miss',
     tint: '#F44336',
     tileBg: 'rgba(244, 67, 54, 0.92)',
     pairsStart: 4,
-    timerStart: 12,
+    timerStart: 16,
     timerDelta: 2,
-    mismatchPenalty: 2,
+    mismatchPenalty: 1,
     levelCap: null,
     mistakeBudget: null,
   },
   challenge: {
     id: 'challenge',
     label: 'Challenge',
-    hint: '1 mistake / level',
+    hint: 'Tight mistake budget',
     tint: '#9C27B0',
     tileBg: 'rgba(156, 39, 176, 0.92)',
     pairsStart: 6,
@@ -69,7 +69,11 @@ export const MODES = {
     timerDelta: 0,
     mismatchPenalty: 0,
     levelCap: null,
-    mistakeBudget: 1,
+    // Function form: budget scales with pair count. (pairs - 3) gives 3 at
+    // level 1 / 4 at level 2 / 5 at level 3, which is enough to acquire
+    // information from the fresh deck without dying on the first flip.
+    // Per-level — counter resets in nextLevel.
+    mistakeBudget: (pairs) => pairs - 3,
   },
 };
 

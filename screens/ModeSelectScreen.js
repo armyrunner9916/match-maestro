@@ -183,7 +183,7 @@ function ModeSelectScreen({
 
         {/* High Scores — separated from premium block by a generous gap */}
         <GlassButton
-          tintColor="#9333ea"
+          tintColor="#3b82f6"
           onPress={onOpenHighScores}
           style={styles.actionButton}
           accessibilityLabel="View high scores"
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 26, // +10 from prior 16 — gives the 2x2 grid breathing room
   },
   actionButtonText: {
     color: '#ffffff',
