@@ -168,13 +168,16 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
+  // No flexWrap — content stays on one line. Modest columnGap + clipping
+  // through the panel's `overflow: hidden` keeps long text in-bounds on
+  // narrower devices (iPhone SE-class). If overflow ever bites, shorten
+  // the labels first ("Lvl" instead of "Level") before reducing fonts.
   statusInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: 8,
-    flexWrap: 'wrap',
+    columnGap: 6,
   },
   modeChip: {
     fontSize: 14,
@@ -182,7 +185,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   statusItem: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -192,7 +195,7 @@ const styles = StyleSheet.create({
     color: '#d8b4fe',
   },
   divider: {
-    fontSize: 15,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.45)',
   },
   pauseButton: {
