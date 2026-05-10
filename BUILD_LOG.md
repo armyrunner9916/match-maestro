@@ -10,18 +10,18 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `9c7e448 Phase 6.1 polish: center status panel content + abbreviate labels`
+**Last commit:** `cb931ad Phase 10: drop light mode entirely`
 **Working tree:** clean, all commits pushed
-**App state:** Phase 6 + 8 complete + post-ship polish. End-to-end
-gameplay loop is now Liquid Glass throughout — mode select, in-game
-header, pause, level-up celebration, game over. Card flips animate.
-Game Over screen is per-mode-aware (timeout / mistakes / gaveUp /
-Easy completion variants) with a "🎉 New high score!" callout and a
+**App state:** All gameplay and visual work for 2.0 is complete.
+Phase 10 has begun — light mode dropped (dark-only now), version
+bumps + real-device testing + store submission remain. End-to-end
+gameplay loop is fully Liquid Glass — mode select, in-game header,
+pause, level-up celebration, game over. Card flips animate. Game
+Over screen is per-mode-aware (timeout / mistakes / gaveUp / Easy
+completion variants) with a "🎉 New high score!" callout and a
 native Share button pointed at `https://matchmaestro.app`. In-game
-header has Pause + Give Up icons side-by-side (one-tap exit option).
-HighScoresModal removed — per-mode best lives on the mode tiles which
-were enlarged to fill the freed vertical space. Only Phase 10 (QA +
-ship) and the light-mode decision remain on the 2.0 roadmap.
+header has Pause + Give Up icons side-by-side. HighScoresModal
+removed; per-mode best lives on the mode tiles.
 
 Game flow: tap mode tile → play that mode → level-up toast between
 levels → game over variant matches outcome → main menu (returns to
@@ -63,6 +63,8 @@ d558343 Phase 6.5: rotateY card flip animation
 6bff305 Fix: GlassPanel/GlassButton swallowed flex; add Give Up button
 dbaeeb4 Phase 8 cleanup: remove HighScoresModal, enlarge mode tiles
 9c7e448 Phase 6.1 polish: center status panel content + abbreviate labels
+9c43dd2 docs: sync BUILD_LOG with Phase 6 + 8 polish iterations
+cb931ad Phase 10: drop light mode entirely
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -709,42 +711,98 @@ Maestro's UX is vertical-first.
     instead of "Level", "Misses:" instead of "Misses left:") with
     accessibilityLabel preserving the long form for screen-reader
     users.
+34. **Light mode dropped, not redesigned** — Phase 10 opened with
+    a call: build a real light-mode pass, or drop the toggle?
+    Dropped. Reasons: (a) every Liquid Glass surface assumes a
+    dark background — building a light pass would mean re-tinting
+    every panel/button + repainting text colors throughout, days
+    of work for a feature with limited demand; (b) the dark
+    aesthetic is the brand now (mode tile palette + navy bg);
+    (c) existing users won't be surprised — light mode was
+    already visually broken so anyone who'd selected it had
+    presumably switched back. AsyncStorage still has the field
+    in the settings blob, but it's ignored on load — no
+    migration needed.
+35. **Header spacer to keep banner centered** — when the sun/moon
+    toggle was removed from ModeSelectScreen's header, the
+    banner shifted left (only the gear icon remained on the
+    right). Considered: (a) accept the asymmetry, (b) absolute-
+    position the gear, (c) add an invisible 44pt spacer on the
+    left. Picked (c) — explicit and self-documenting in the JSX;
+    nothing depends on intrinsic layout knowledge. Same pattern
+    we should reach for any time a symmetric header has icons
+    removed.
+36. **Final iOS build via Xcode, not EAS** — Steve has direct
+    Apple Developer access and prefers Xcode Archive for App
+    Store submissions (full control over provisioning, signing,
+    and distribution). EAS is used only for the Android
+    production build because Google Play accepts the resulting
+    AAB cleanly and Steve doesn't maintain a local Android
+    signing keystore for prod. Documented in the build-commands
+    section so future-Claude doesn't suggest `eas build
+    --platform ios` for the submission step.
 
 ---
 
-## Next: Phase 10 — QA + ship
+## In progress: Phase 10 — QA + ship
 
-All gameplay-shaping phases are complete. What's left is the polish
-and verification path to a real 2.0 release.
+All gameplay-shaping phases are complete. Phase 10 has started:
+light mode was dropped tonight. Remaining: version bumps,
+real-device QA, store submission.
 
-**Phase 10 work plan (high-level — flesh out at start of session):**
+**Phase 10 work plan:**
 
-1. **Light-mode decision.** The dark/light toggle still flips
-   background colors but most layouts and text styles assume dark.
-   Pick one: (a) drop the toggle entirely and remove `darkMode`
-   prop plumbing, (b) build a real light-mode pass with proper text
-   colors and Glass overlay tints. Option (a) is the smaller change.
-2. **Real-device testing.** Everything verified to date is on
+1. ✅ **Light-mode decision.** Dropped entirely. Dark-only app.
+   Code change shipped in `cb931ad`. Existing users' stored
+   `darkMode` setting is silently ignored on load.
+2. ⏭️ **Version bumps** (Steve handling — has the keys to all the
+   relevant config files). Bump from `1.0.3` → `2.0.0` in:
+   - `package.json` (`version` field)
+   - `app.json` (Expo config — top-level `version`, `ios.buildNumber`,
+     `android.versionCode`)
+   - iOS `Info.plist` (`CFBundleShortVersionString` +
+     `CFBundleVersion`)
+   - Android `build.gradle` (`versionCode` increment + `versionName`)
+3. ⏭️ **Real-device testing.** Everything verified to date is on
    iOS Simulator (iPhone Air + iPad Pro 11"). Test on:
-   - Physical iPhone (any model) — confirm Liquid Glass renders
-     correctly on real iOS 26
+   - Physical iPhone — confirm Liquid Glass renders correctly on
+     real iOS 26
    - Physical iPad — confirm 480px panel cap reads well at scale
-   - Physical Android phone — confirm safe-area fix landed,
-     LiquidGlass fallback bg looks OK
+   - Physical Android phone — confirm safe-area fix landed, the
+     LiquidGlass fallback bg + gradient bevel look OK
    - Physical Android tablet — same checks
-3. **AdMob smoke test on real devices.** Test ads + Remove Ads
-   purchase flow on real devices (simulator can't run real ads).
-4. **RevenueCat purchase test.** Sandbox iOS test purchase →
+4. ⏭️ **AdMob smoke test on real devices.** Simulator can't run
+   real ads. Verify banner loads on iOS + Android.
+5. ⏭️ **RevenueCat purchase test.** Sandbox iOS test purchase →
    verify entitlement → restore. Same on Android Play Console
    internal testing.
-5. **Stale-state audit.** Comment cleanup pass — search for any
-   remaining `completedLevel` references (should only be in
-   historical comments), confirm Phase 9.1 deferred note is
-   removed from open issues.
-6. **Production build.** EAS build for both platforms, internal
-   distribution test, then submit.
-7. **Post-launch:** revisit Daily Challenge for 2.1 if signal is
-   good.
+6. ⏭️ **Stale-state audit.** Comment cleanup pass — confirm no
+   stranded references to removed surfaces (completedLevel,
+   HighScoresModal, darkMode in non-comment positions).
+7. ⏭️ **Production builds.** Build commands per platform:
+   - **iOS dev (real-device test):** Xcode → Run on device
+   - **iOS production (App Store submission):** **Xcode** — Archive
+     → Distribute App → App Store Connect. (Not EAS — Steve handles
+     the final iOS build directly through Xcode.)
+   - **Android dev (real-device test):**
+     `cd android && ./gradlew assembleRelease` → install APK on
+     device manually
+   - **Android production (Google Play submission):**
+     `eas build --platform android --profile production` → upload
+     AAB to Play Console
+8. ⏭️ **Submit.** Upload final builds, fill out App Store / Play
+   Console metadata (description, "What's New in 2.0" notes,
+   keywords, screenshots at required device sizes, privacy
+   disclosures for AdMob + RevenueCat), submit for review.
+9. ⏭️ **Post-launch:** revisit Daily Challenge for 2.1 if signal is
+   good. Stats modal also queued (see "Open notes / reminders").
+
+**Division of labor:**
+- Steve: version-bump edits (he knows where every file lives),
+  real-device testing on his hardware, Xcode iOS Archive, EAS
+  Android build, App Store + Play Console submissions.
+- Claude: any code changes that come out of device testing,
+  metadata copy drafting if requested, the stale-state audit.
 
 ---
 
@@ -758,11 +816,21 @@ and verification path to a real 2.0 release.
 3. `git log --oneline | head -10` to confirm the last commit matches
    what's recorded above.
 4. `git status` should show working tree clean.
-5. Build commands:
-   - **iOS dev:** Xcode → Run on simulator
-   - **Android dev:** `cd android && ./gradlew assembleDebug`
-   - **Android release:** `cd android && ./gradlew assembleRelease`
-   - **Android EAS prod:** `eas build --platform android --profile production`
+5. Build commands (Phase 10 ship plan):
+   - **iOS dev (simulator):** Xcode → Run
+   - **iOS dev (real device):** Xcode → Run on device
+   - **iOS production (App Store submission):** Xcode → Product →
+     Archive → Distribute App → App Store Connect.
+     *Steve handles the final iOS build directly through Xcode —
+     not via EAS.*
+   - **Android dev (debug APK):** `cd android && ./gradlew assembleDebug`
+   - **Android dev (release APK for real-device test):**
+     `cd android && ./gradlew assembleRelease`
+   - **Android production (Google Play submission):**
+     `eas build --platform android --profile production` → upload
+     resulting AAB to Play Console.
+     *Steve uses EAS only for the final Android build; iOS final
+     goes through Xcode.*
 
 ---
 
@@ -773,12 +841,9 @@ and verification path to a real 2.0 release.
   StatusBar.currentHeight : 0`) applied to ModeSelectScreen,
   GameScreen, and GameOverScreen. Verify on a real Android device
   during Phase 10 QA.
-- **Light mode is visually broken** — the Phase 3 layout assumes a
-  dark background everywhere (Liquid Glass renders against dark).
-  The dark/light toggle still flips the bg color but white-on-light
-  text becomes unreadable. Decision pending: drop the toggle
-  entirely (every screen now assumes dark anyway) or build a real
-  light-mode pass. Best landed in Phase 6 or Phase 10.
+- **~~Light mode is visually broken~~** — ✅ resolved in Phase 10
+  (`cb931ad`) by dropping light mode entirely. App is dark-only;
+  the dark/light toggle was removed from ModeSelectScreen's header.
 - **Game Over screen still wears pre-Phase-3 styling** — flat dark
   card with three colored TouchableOpacity buttons. Intentional —
   Phase 8 redesigns it with per-mode-aware variants. Visual
@@ -802,10 +867,10 @@ and verification path to a real 2.0 release.
 - **~~Phase 9.1 (`completedLevel` semantic)~~** — ✅ resolved by
   Phase 6.4. Renamed to `levelReached` and the semantic now matches
   the name (highest level finished, not entered).
-- The `darkMode` prop is currently unused inside `SettingsModal.js`
-  (the Glass aesthetic is dark regardless). Plan calls for moving the
-  dark-mode toggle into Settings during the Phase 3 work — leave the
-  prop in the signature until then to avoid a multi-file edit.
+- **~~`darkMode` prop unused in SettingsModal~~** — ✅ resolved
+  when light mode was dropped in Phase 10. The prop was removed
+  from SettingsModal's signature; every screen now assumes dark
+  styling unconditionally.
 - `gh` CLI is **not** installed. Future repo creation would benefit
   from `brew install gh && gh auth login` (one-line repo setup
   thereafter). Not blocking.
@@ -852,10 +917,11 @@ and verification path to a real 2.0 release.
   normalized, iPad portrait lock corrected
 - **GitHub:** repo created, all history pushed, Keychain configured
 
-### Afternoon + evening session — 2026-05-10 (Phases 6 + 8 + polish)
+### Afternoon + evening session — 2026-05-10 (Phases 6 + 8 + polish + Phase 10 kickoff)
 
-- **11 commits** total (8 implementation + 3 polish), all pushed
-  to GitHub by end of session
+- **13 commits** total (8 implementation + 3 polish + 1 doc sync
+  + 1 Phase 10 light-mode drop), all pushed to GitHub by end of
+  session
 - **Phases completed:** 6 (all five items) + 8 (all four items) +
   three polish iterations addressing layout bugs and UX feedback
 - **Files added:** `screens/PauseOverlay.js`, `screens/LevelUpToast.js`
@@ -877,9 +943,14 @@ and verification path to a real 2.0 release.
   pointed at https://matchmaestro.app for cross-platform redirect
 - **Net code delta over the day:** +1180 / −350 lines (plus the
   HighScoresModal removal pruning 168 lines on its own)
-- **2.0 status:** all gameplay-shaping work complete and shipped to
-  origin/main; only Phase 10 (QA + ship) and the light-mode
-  decision remain.
+- **Phase 10 kickoff:** light mode dropped tonight. Remaining
+  Phase 10 work: version bumps (Steve), real-device testing,
+  AdMob + RevenueCat sandbox testing, App Store / Play Console
+  metadata + screenshots, EAS Android production build, Xcode
+  iOS Archive, submissions. Division of labor documented in
+  the Phase 10 plan above.
+- **2.0 status:** all gameplay-shaping work complete and shipped
+  to origin/main. Phase 10 in progress.
 
 ### Morning session — 2026-05-10 (Phases 4, 3, polish)
 
