@@ -68,16 +68,19 @@ const ModeTile = ({ modeId, modeStats, onPress }) => {
     >
       <GlassCard style={styles.tile}>
         <View style={[styles.tileFill, { backgroundColor: cfg.tileBg }]}>
-          {/* Glossy gradient overlay: bright at the top, neutral mid,
-              slight shadow at the bottom — gives the tile dimension and
-              a "lit from above" Liquid Glass feel. */}
+          {/* Glossy gradient overlay: a bright sliver at the very top
+              edge, strong sheen across the upper third, neutral mid, and
+              a punchy shadow at the bottom. The four-stop curve reads as
+              a real bevel rather than a soft wash, matching Numlok's
+              tile depth. */}
           <LinearGradient
             colors={[
-              'rgba(255,255,255,0.22)',
-              'rgba(255,255,255,0.04)',
-              'rgba(0,0,0,0.18)',
+              'rgba(255,255,255,0.55)', // top edge highlight (1-2px effect)
+              'rgba(255,255,255,0.28)', // sheen across upper third
+              'rgba(255,255,255,0.00)', // neutral
+              'rgba(0,0,0,0.28)',       // bottom shadow
             ]}
-            locations={[0, 0.55, 1]}
+            locations={[0, 0.05, 0.45, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -293,12 +296,13 @@ const styles = StyleSheet.create({
     flex: 1, // each tile takes equal share of the row
     borderRadius: 16,
     overflow: 'hidden',
-    // Subtle shadow so tiles read as elevated against the navy bg.
+    // Heavier drop shadow than typical — pairs with the inner gradient
+    // bevel to make the tiles feel raised off the navy bg.
     shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   tile: {
     borderRadius: 16,
