@@ -85,7 +85,13 @@ export default function App() {
   const [cards, setCards] = useState([]);
   const [flippedCards, setFlippedCards] = useState([]);
   const [matchedPairs, setMatchedPairs] = useState([]);
-  const [completedLevel, setCompletedLevel] = useState(0);
+  // Phase 6.4: replaces `completedLevel` (which previously recorded "level
+  // entered" — wrong semantic). `levelReached` is the highest level the
+  // player has FINISHED in this run. 0 means no level finished yet.
+  // Updated by nextLevel just before advancing. Read by endGame for
+  // high-score storage. The Game Over screen displays the *current* `level`
+  // (the level the run ended on), which can be levelReached + 1.
+  const [levelReached, setLevelReached] = useState(0);
   const [isProcessingMatch, setIsProcessingMatch] = useState(false);
 
   // Phase 4 mode-aware run state. Reset by startGame; consumed by endGame
@@ -336,7 +342,7 @@ export default function App() {
     setMatchedPairs([]);
     setFlippedCards([]);
     setCards(initializeCards(cfg.pairsStart));
-    setCompletedLevel(0);
+    setLevelReached(0);
     setIsProcessingMatch(false);
     setTotalMismatches(0);
     setMistakesThisLevel(0);
@@ -344,25 +350,34 @@ export default function App() {
     triggerHaptic('impact');
   };
 
-  // End the current game and persist score if it qualifies. Phase 4: takes
-  // an outcome ('timeout' | 'completed' | 'mistakes' | 'gaveUp') and writes
+  // End the current game and persist score if it qualifies. Takes an
+  // outcome ('timeout' | 'completed' | 'mistakes' | 'gaveUp') and writes
   // per-mode stats alongside the legacy top-10 array.
   //
+  // Phase 6.4: reads `levelReached` (post-rename from completedLevel)
+  // for storage. Optional `explicitLevelReached` arg lets nextLevel pass
+  // the freshly-computed value without waiting for the state update to
+  // flush — useful for the Easy levelCap completion path.
+  //
   // Defined before nextLevel because nextLevel calls endGame for the Easy
-  // mode levelCap completion path, and useCallback closes over its deps at
-  // render time — referencing endGame from nextLevel's deps requires endGame
-  // to be in scope already.
-  const endGame = useCallback((outcome = 'timeout') => {
+  // levelCap path, and useCallback closes over its deps at render time —
+  // referencing endGame from nextLevel's deps requires endGame to already
+  // be in scope.
+  const endGame = useCallback((outcome = 'timeout', explicitLevelReached = null) => {
     setGameState('gameOver');
     setGameOutcome(outcome);
     triggerHaptic('error');
 
-    // Legacy top-10 array — kept for HighScoresModal until Phase 3/8
-    // replaces that consumer. Same logic as before.
-    if (completedLevel > 0) {
+    // Use explicit value when provided (Easy levelCap path), otherwise
+    // fall back to the state value.
+    const lr = explicitLevelReached ?? levelReached;
+
+    // Legacy top-10 array — kept for HighScoresModal until Phase 8
+    // replaces that consumer. Same logic as before, now using lr.
+    if (lr > 0) {
       const newScore = {
         name: playerName,
-        level: completedLevel,
+        level: lr,
         date: new Date().toISOString(),
       };
 
@@ -375,9 +390,9 @@ export default function App() {
 
     // Per-mode stats. Easy tracks completion + tie-breaker; the others
     // track best level reached. Only update when there's something to
-    // record (completedLevel > 0 OR an Easy completion).
+    // record (lr > 0 OR an Easy completion).
     const isEasyCompletion = mode === 'easy' && outcome === 'completed';
-    if (completedLevel > 0 || isEasyCompletion) {
+    if (lr > 0 || isEasyCompletion) {
       const next = { ...modeStats };
 
       if (mode === 'easy') {
@@ -393,26 +408,30 @@ export default function App() {
         next.easy = { completed, fewestMismatches };
       } else {
         const prevBest = next[mode]?.bestLevel ?? 0;
-        next[mode] = { bestLevel: Math.max(prevBest, completedLevel) };
+        next[mode] = { bestLevel: Math.max(prevBest, lr) };
       }
 
       setModeStats(next);
       persistModeStats(next);
     }
-  }, [mode, completedLevel, playerName, highScores, modeStats, totalMismatches, triggerHaptic]);
+  }, [mode, levelReached, playerName, highScores, modeStats, totalMismatches, triggerHaptic]);
 
-  // Advance to the next level. Phase 6.4 / 9.1 will fix the `completedLevel`
-  // semantic — it currently records the level entered, not the level finished.
-  // Declared before handleCardPress so the latter can list it in its deps.
+  // Advance to the next level. Called when all pairs in the current level
+  // are matched. Phase 6.4: now records `levelReached` correctly — the
+  // level the player JUST FINISHED, not the level being entered. Closes
+  // the Phase 9.1 deferred bug.
   // Phase 4: pulls timer/pair deltas from MODES[mode], honors levelCap by
   // ending the run with outcome 'completed' once the cap is cleared.
   const nextLevel = useCallback(() => {
     const cfg = MODES[mode];
 
     // Easy mode: completing the cap level ends the run with a "completed"
-    // outcome instead of advancing. Phase 8 will surface a celebration UI.
+    // outcome. Pass `level` explicitly to endGame because the
+    // setLevelReached below is async and endGame's closure would
+    // otherwise see the stale value.
     if (cfg.levelCap !== null && level >= cfg.levelCap) {
-      endGame('completed');
+      setLevelReached(level);
+      endGame('completed', level);
       return;
     }
 
@@ -421,6 +440,7 @@ export default function App() {
     const newTimeLimit =
       cfg.timerStart === null ? null : timeLimit + cfg.timerDelta;
 
+    setLevelReached(level); // record what we just finished
     setLevel(newLevel);
     setPairs(newPairs);
     setTimeLimit(newTimeLimit);
@@ -428,7 +448,6 @@ export default function App() {
     setMatchedPairs([]);
     setFlippedCards([]);
     setCards(initializeCards(newPairs));
-    setCompletedLevel(newLevel);
     setMistakesThisLevel(0); // Challenge mode: per-level counter resets
     triggerHaptic('success');
   }, [mode, level, pairs, timeLimit, triggerHaptic, endGame]);
@@ -612,7 +631,7 @@ export default function App() {
       <>
         <GameOverScreen
           darkMode={darkMode}
-          completedLevel={completedLevel}
+          level={level}
           onNewGame={startGame}
           onMainMenu={() => setGameState('landing')}
           onViewHighScores={() => {

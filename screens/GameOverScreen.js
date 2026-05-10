@@ -19,7 +19,7 @@ import { COLORS } from '../game/constants';
 // High Scores. Same .button style, distinct semantic colors.
 function GameOverScreen({
   darkMode,
-  completedLevel,
+  level,
   onNewGame,
   onMainMenu,
   onViewHighScores,
@@ -32,7 +32,7 @@ function GameOverScreen({
             Game Over!
           </Text>
           <Text style={[styles.label, styles.levelReached, { color: darkMode ? '#ffffff' : '#000000' }]}>
-            Level Reached: {completedLevel}
+            Level Reached: {level}
           </Text>
 
           {/* Cyan: positive primary "try again" action */}
