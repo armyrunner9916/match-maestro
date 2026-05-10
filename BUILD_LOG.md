@@ -10,11 +10,18 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `91b1fbc Phase 3: Mode select screen — Liquid Glass aesthetic`
+**Last commit:** `a63c487 Phase 3 polish: Challenge mistakeBudget tuned to (pairs - 1)`
 **Working tree:** clean, all commits pushed
 **App state:** builds and runs on iOS simulator (iPhone Air + iPad Pro
-11-inch verified). All four modes are now selectable from the new
-ModeSelectScreen; the Liquid Glass aesthetic dominates the home screen.
+11-inch verified). All four modes are selectable from the new
+ModeSelectScreen; Liquid Glass aesthetic dominates the home screen.
+Mode tile colors match Numlok's brand palette (Material 500s) so the
+two apps share visual DNA. Hard and Challenge gameplay both retuned
+through multiple iterations to land at "challenging-but-fair". Phase
+3 + 4 ship complete; the Game Over screen still wears the pre-Phase-8
+flat layout (intentional — the Liquid Glass treatment lands as part
+of Phase 8).
+
 Game flow: tap mode tile → play that mode → game over → main menu
 (returns to mode select).
 
@@ -34,6 +41,14 @@ ce131b2 Phase 7: Settings refresh — SVG picker + Liquid Glass
 6444321 Phase 4: Modes config — pure logic for Easy/Normal/Hard/Challenge
 70b07da docs: update BUILD_LOG for Phase 4
 91b1fbc Phase 3: Mode select screen — Liquid Glass aesthetic
+342b5bc docs: update BUILD_LOG for Phase 3
+72e67d9 Phase 3 fix: mode tiles now use solid color fill matching Numlok
+11acccb Phase 3 polish: glossy gradient overlay on mode tiles
+6bf3dfb Phase 3 polish: stronger 3D bevel on mode tiles
+f5c72be Phase 3 polish: gameplay tuning + UI nits
+7c6a456 Phase 3 polish: Challenge mode mistake counter + budget tweak
+f90bf75 Phase 3 polish: Challenge mode locks first flip
+a63c487 Phase 3 polish: Challenge mistakeBudget tuned to (pairs - 1)
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -163,12 +178,15 @@ single source of truth. `startGame` and `nextLevel` consume `MODES[mode]`
 instead of hardcoded values. Default mode is `'normal'` so existing
 behavior is preserved verbatim until Phase 3 wires the mode-select UI.
 
-| Mode | pairsStart | timerStart | timerDelta | mismatchPenalty | levelCap | mistakeBudget |
-|---|---|---|---|---|---|---|
-| Easy | 2 | 20 | +5 | 0 | 10 | — |
-| Normal | 2 | 15 | +3 | 0 | — | — |
-| Hard | 4 | 12 | +2 | 2s | — | — |
-| Challenge | 6 | null (no timer) | 0 | 0 | — | 1 |
+_Final tuned values after the Phase 3 polish session — see "Phase 3
+polish iterations" below for the journey._
+
+| Mode | pairsStart | timerStart | timerDelta | mismatchPenalty | levelCap | mistakeBudget | lockFirstFlip |
+|---|---|---|---|---|---|---|---|
+| Easy | 2 | 20 | +5 | 0 | 10 | — | false |
+| Normal | 2 | 15 | +3 | 0 | — | — | false |
+| Hard | 4 | 16 | +2 | 1s | — | — | false |
+| Challenge | 6 | null (no timer) | 0 | 0 | — | `(pairs - 1)` | true |
 
 - **4.1 `MODES` config** — Single source of truth + `DEFAULT_MODE`,
   `MODE_IDS`, `DEFAULT_MODE_STATS`, `isValidMode()`. Adding a new mode
@@ -189,6 +207,11 @@ behavior is preserved verbatim until Phase 3 wires the mode-select UI.
   reset by `nextLevel`. Run ends with outcome `'mistakes'` on the
   (budget+1)th mismatch in a level. Timer effect early-returns when
   `timeLimit === null` so Challenge runs without a clock.
+  `mistakeBudget` supports both number and function forms; Challenge
+  uses the function form `(pairs) => pairs - 1` so the budget scales
+  with level. Resolved at call site in `handleCardPress`. Counter
+  surfaced to the player via the GameScreen "Mistakes left: N" line
+  added in Phase 3 polish.
 - **4.6 Easy mode levelCap** — `nextLevel` checks `level >= levelCap`
   before advancing; if hit, ends the run with outcome `'completed'`
   and records `fewestMismatches` (cumulative `totalMismatches` across
@@ -210,24 +233,36 @@ Liquid Glass becomes the dominant aesthetic, as planned. Default mode
 flow: tap a mode tile → play that mode → game over → "Main Menu" →
 returns to ModeSelectScreen with name + last selected mode preserved.
 
-| Mode | Tint | Hint shown on tile |
-|---|---|---|
-| Easy | Green `#10b981` | 10 levels |
-| Normal | Amber `#f59e0b` | Classic |
-| Hard | Red `#ef4444` | −2s per miss |
-| Challenge | Purple `#9333ea` | 1 mistake / level |
+_Tints and hints updated in the morning's polish pass — see "Phase 3
+polish iterations" below._
+
+| Mode | Tint (solid) | Tile fill (rgba @ 0.92) | Hint shown on tile |
+|---|---|---|---|
+| Easy | `#4CAF50` | `rgba(76,175,80,0.92)` | 10 levels |
+| Normal | `#FFC107` | `rgba(255,193,7,0.92)` | Classic |
+| Hard | `#F44336` | `rgba(244,67,54,0.92)` | −1s per miss |
+| Challenge | `#9C27B0` | `rgba(156,39,176,0.92)` | Tight mistake budget |
+
+Brand palette = Material 500s, matching Numlok so the two apps share
+visual DNA. Each mode entry stores both `tint` (solid hex, for labels
+and future in-game header) and `tileBg` (the rgba form, for the
+mode tile fill).
 
 - **3.1 ModeSelectScreen layout** — Compact header (sun/moon emoji
   button | banner | gear emoji button), name input, 2×2 mode grid,
   full-width High Scores GlassButton, generous gap, then Remove Ads +
   Restore Purchases grouped together. Premium players see a "✨
   Premium — No Ads" badge in place of the ad-removal block.
-- **3.2 Mode tile design** — `Pressable` wrapping `GlassCard` with
-  three children: 4px colored top accent bar, mode label in the brand
-  tint, white-alpha hint, white-alpha-dim per-mode stat. Glass surface
-  stays neutral (no `tintColor` passed) — same-color text on
-  same-color glass washes out. Pressed state: 3% scale-down + 8%
-  opacity drop.
+- **3.2 Mode tile design** — `Pressable` wrapping `GlassCard` wrapping
+  a colored inner View at 0.92 alpha (lets the underlying glass blur
+  show through subtly). All text is white per Numlok's recipe: label
+  20pt 700, hint 14pt, stat 12pt @ 0.9 opacity. A four-stop
+  `LinearGradient` overlay gives the tile a "lit from above" 3D
+  bevel: `rgba(255,255,255,0.55)` bright top edge → `0.28` upper-third
+  sheen → `0.00` neutral mid → `rgba(0,0,0,0.28)` bottom shadow, with
+  locations `[0, 0.05, 0.45, 1]`. Heavier outer drop shadow
+  (opacity 0.45, radius 14, offset y 8) so tiles read as raised off
+  the navy bg. Pressed state: 3% scale-down + 8% opacity drop.
 - **3.3 Per-mode stat formatting** —
   - Easy not-completed: `"Not yet completed"`
   - Easy completed: `"✓ Completed (N misses)"` (or `(1 miss)` singular)
@@ -249,6 +284,62 @@ returns to ModeSelectScreen with name + last selected mode preserved.
   screen already assumes dark via Liquid Glass), or build a real
   light-mode pass. Decision deferred to Phase 6/8 or a dedicated
   pass — for now, recommend testing dark only.
+
+### Phase 3 polish iterations (this morning's session) ✅
+
+The first Phase 3 commit (`91b1fbc`) shipped a viable but visually
+underbaked tile system and gameplay tuning that turned out to be
+unwinnable. Eight follow-up commits brought it to ship-quality.
+Listed in shipped order so a future reader can trace what changed
+and why:
+
+1. **`72e67d9` Mode tiles: solid color fill matching Numlok.** First
+   draft used neutral glass + thin colored accent bar + colored
+   label. Looked flat and didn't match brand. User pointed at Numlok
+   as the visual reference; switched to solid color fill at 0.85
+   alpha + all-white text per Numlok's recipe.
+2. **`11acccb` Glossy gradient overlay.** Solid-color tiles still
+   read as flat against the navy bg. Added a vertical
+   `LinearGradient` overlay (white sheen top, neutral mid, dark
+   shadow bottom) using `expo-linear-gradient` (already a dep via
+   GlassButton). First-cut gradient values were too tame.
+3. **`6bf3dfb` Stronger 3D bevel.** Tuned the gradient to a four-stop
+   curve with a bright top-edge highlight, upper-third sheen, neutral
+   mid, and a punchy bottom shadow. Bumped tile bg alpha 0.85 → 0.92
+   for more saturated brand colors. Heavier outer drop shadow.
+   This is the version that shipped — feels appropriately glassy.
+4. **`f5c72be` Gameplay tuning + UI nits.** Hard mode at level 1
+   (4 pairs / 12s timer / 2s penalty per miss) was mathematically
+   unwinnable: a player needs ~14-16s of mandatory time but only
+   has 12. Tuned to 16s start + 1s penalty (Option C from the
+   tradeoff table). Challenge mode's 1-mistake budget was also
+   coin-flippy — switched to function-form `(pairs - 3)` to scale
+   with level. High Scores button switched from purple to blue
+   (`#9333ea` → `#3b82f6`) so it doesn't blend with the Challenge
+   tile. Action button `marginTop` 16 → 26 so the 2×2 grid breathes.
+5. **`7c6a456` Mistake counter + budget tweak.** Player feedback:
+   `(pairs - 3)` was still too tight, especially the first few
+   moves of a fresh level. Bumped to `(pairs + 1)`. Added a
+   "Mistakes left: N" indicator in `GameScreen`, rendered directly
+   below the banner for any mode with a `mistakeBudget`. Light
+   purple text (`#d8b4fe`) ties to the Challenge brand tint.
+   `accessibilityLiveRegion="polite"` so VoiceOver narrates the
+   count after each mismatch.
+6. **`f90bf75` Lock first flip in Challenge.** Players could tap a
+   card to peek at its symbol then tap again to un-flip without
+   committing — effectively learning cards "for free" between picks.
+   Added `lockFirstFlip` field on each `MODES` entry (false for
+   Easy/Normal/Hard, true for Challenge). `handleCardPress` gates
+   the un-flip branch on `cfg.lockFirstFlip`. Other modes still
+   allow un-flipping accidental taps as a UX courtesy.
+7. **`a63c487` Challenge budget tuned to (pairs - 1).** `(pairs + 1)`
+   was overcorrecting — 7 free mistakes at level 1 against ~3-5
+   expected from competent play removed all sense of consequence.
+   `(pairs - 1)` lands at 5 at level 1 — tight enough to bite
+   alongside `lockFirstFlip`, generous enough that fresh-deck info
+   gathering doesn't auto-kill the run. Three iterations
+   (`pairs - 3` → `pairs + 1` → `pairs - 1`) bracketed the sweet
+   spot.
 
 ### iPad portrait lock ✅
 
@@ -312,9 +403,10 @@ Maestro's UX is vertical-first.
     Phase 4 correctness (the `'completed'` path writes Easy mode's
     `completed: true` flag); Phase 8 will surface the celebration UI.
 13. **Mistake budget interpreted as "free mistakes per level"** —
-    `mistakeBudget: 1` means one free mistake; the second ends the
-    run. Per-level counter resets on level advance. Spec wording
-    ("end on the second mistake") confirmed this reading.
+    Counter resets on level advance; the (budget+1)th mismatch ends
+    the run. Phase 4 shipped with `mistakeBudget: 1`; Phase 3 polish
+    converted the field to support both number and function forms,
+    landed on `(pairs) => pairs - 1` after three iterations.
 14. **Brand color set finalized in Phase 3** — Easy=green, Normal=amber,
     Hard=red, Challenge=purple. The Phase 3 first-draft proposal
     (Easy/green, Normal/blue, Hard/amber, Challenge/purple) was
@@ -344,6 +436,36 @@ Maestro's UX is vertical-first.
     behavior is identical between old and new code). Lesson: any
     visible UI change MUST be merged to main before user testing,
     or the user must explicitly open the worktree's `.xcworkspace`.
+    Adopted: ff-merge worktree → main after every commit so user's
+    Xcode workspace always sees the latest.
+19. **Numlok as visual reference** — the user has another shipped
+    app (Numlok at `/Users/stevereitz/app-code/Numlok/`) with the
+    same designer's aesthetic. When in doubt about visual decisions,
+    look there first. Phase 3 mode tile design lifted Numlok's
+    Material 500 palette, 0.85→0.92 alpha tile fill, and white-text
+    typography directly. Saved several iterations of "is this
+    right?" guessing.
+20. **`mistakeBudget` as a function** — instead of static numbers
+    that don't scale with level, the field can be `null | number |
+    (pairs) => number`. Resolved at the call site in
+    `handleCardPress`. Cheap pattern that future modes can adopt for
+    any pair-scaled or level-scaled value.
+21. **Hard mode tuned with both timer + penalty** — Option C from
+    the tradeoff table (timer 12 → 16, penalty 2s → 1s) instead of
+    just one. Penalty alone was preserving the bad math; timer
+    alone would have eaten the mode's identity. Both together: Hard
+    feels like Normal-with-consequences, not Normal-but-impossible.
+22. **`lockFirstFlip` as a mode-level field** — added to MODES per
+    entry rather than hardcoding `mode === 'challenge'` in
+    handleCardPress. Same single-source-of-truth principle as the
+    other mode config fields.
+23. **Game Over redesign deferred to Phase 8** — user noticed the
+    flat pre-Phase-3 styling on GameOverScreen during testing and
+    asked when it would get the Liquid Glass treatment. Offered
+    a Phase-7-style light pass now (just GlassPanel/GlassButton
+    swap) vs full Phase 8 redesign with per-mode-aware variants
+    later. User chose to wait for Phase 8 — keeps the redesign
+    cohesive.
 
 ---
 
@@ -398,22 +520,21 @@ should land somewhere in here too.
 
 ## Known issues — fix in a later phase
 
-- **Android top padding bug.** On Android phones and tablets, top-row
-  content (Settings icon, dark/light toggle, Match Maestro logo) gets
-  pushed up under the status bar. iOS handles this correctly via
-  `SafeAreaView`. Confirmed in 1.x; will recur in any new screen until
-  fixed. Canonical fix is Taplight's pattern:
-  ```js
-  container: {
-    flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  }
-  ```
-  Alternative: install `react-native-safe-area-context` and use *its*
-  cross-platform `SafeAreaView`. **Best phase to address:** Phase 3
-  (mode-select redesign) — that's when we rebuild the header row anyway.
-  Apply to every screen's outer container at that time, not just mode
-  select.
+- **~~Android top padding bug~~** — ✅ resolved in Phase 3. Canonical
+  Taplight fix (`paddingTop: Platform.OS === 'android' ?
+  StatusBar.currentHeight : 0`) applied to ModeSelectScreen,
+  GameScreen, and GameOverScreen. Verify on a real Android device
+  during Phase 10 QA.
+- **Light mode is visually broken** — the Phase 3 layout assumes a
+  dark background everywhere (Liquid Glass renders against dark).
+  The dark/light toggle still flips the bg color but white-on-light
+  text becomes unreadable. Decision pending: drop the toggle
+  entirely (every screen now assumes dark anyway) or build a real
+  light-mode pass. Best landed in Phase 6 or Phase 10.
+- **Game Over screen still wears pre-Phase-3 styling** — flat dark
+  card with three colored TouchableOpacity buttons. Intentional —
+  Phase 8 redesigns it with per-mode-aware variants. Visual
+  inconsistency with home screen is temporary.
 
 ---
 
@@ -440,10 +561,24 @@ should land somewhere in here too.
 - `gh` CLI is **not** installed. Future repo creation would benefit
   from `brew install gh && gh auth login` (one-line repo setup
   thereafter). Not blocking.
+- **Numlok** at `/Users/stevereitz/app-code/Numlok/App.js` is the
+  visual reference app — same designer hand. When stuck on a
+  visual decision (palette, tile structure, glass treatment), look
+  there first before guessing.
+- **Worktree workflow:** the project lives in two paths
+  simultaneously — main checkout at `/Users/stevereitz/app-code/MatchMaestro/`
+  (where Xcode opens) and the active worktree at
+  `/Users/stevereitz/app-code/MatchMaestro/.claude/worktrees/<name>/`
+  (where Claude works). Every commit on the worktree branch must
+  ff-merge into the main checkout (`git -C /path/to/main merge
+  --ff-only <worktree-branch>`) so Xcode sees the change before
+  the user can test it.
 
 ---
 
-## Today's session in numbers
+## Sessions in numbers
+
+### Initial session (Phases 1, 9, 2, 7)
 
 - **9 commits** pushed to GitHub (one was the GitHub-generated initial)
 - **Phases completed:** 1, 9, 2, 7 (4 of 8 plan phases done)
@@ -455,4 +590,27 @@ should land somewhere in here too.
   normalized, iPad portrait lock corrected
 - **GitHub:** repo created, all history pushed, Keychain configured
 
-Big day. Sleep well. 🎴
+### Morning session — 2026-05-10 (Phases 4, 3, polish)
+
+- **12 commits** pushed to GitHub (`9dd687e..a63c487`)
+- **Phases completed:** 4 + 3 (now 6 of 8 plan phases done; Phase 5
+  cut from 2.0)
+- **Files added:** `game/modes.js` (new — MODES config + helpers),
+  `screens/ModeSelectScreen.js` (new — replaces LandingScreen)
+- **Files deleted:** `screens/LandingScreen.js`
+- **App.js:** 475 → ~700 lines (mode threading, mode-aware endGame,
+  modeStats persistence, mistakesLeft computation)
+- **Closed bugs:** Android top-padding (Phase 3 safe-area fix),
+  Hard mode unwinnable math, Challenge mode coin-flip-on-first-flip
+- **New mode mechanics shipped:** Easy levelCap, Hard mismatch
+  penalty, Challenge mistake budget + lockFirstFlip, Challenge
+  Mistakes-left HUD indicator
+- **Visual aesthetic:** Liquid Glass dominates the home screen; mode
+  tiles match Numlok's brand DNA; navy `#0a1228` background unified
+  across ModeSelect/Game/GameOver
+- **Iterations on tile design:** 4 (color fill → gradient → bevel →
+  drop shadow tuning)
+- **Iterations on Challenge budget:** 3 (`pairs - 3` →
+  `pairs + 1` → `pairs - 1`)
+
+Nice headway. 🎴
