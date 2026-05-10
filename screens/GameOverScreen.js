@@ -3,68 +3,154 @@ import {
   SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Platform,
   StatusBar,
+  Share,
 } from 'react-native';
-import { COLORS } from '../game/constants';
 
-// Interim 3-button layout. Phase 8 will redesign this as a <GlassCard> with:
-// per-mode-aware Game Over / Easy-completion variants, "🎉 New high score!"
-// callout, share button (Normal/Hard/Challenge only), and Phase 6.4's
-// "Reached Level X (Y/Z pairs matched)" detail.
+import GlassPanel from '../components/GlassPanel';
+import GlassButton from '../components/GlassButton';
+import { COLORS } from '../game/constants';
+import { MODES } from '../game/modes';
+
+// Phase 8: per-mode-aware Game Over redesign.
 //
-// For now: New Game (restarts same mode), Main Menu (back to mode select),
-// High Scores. Same .button style, distinct semantic colors.
+// Outcomes the engine produces (from gameOutcome state, set in endGame):
+//   - 'timeout'   timer hit zero
+//   - 'mistakes'  Challenge mode mistake budget exhausted
+//   - 'gaveUp'    user tapped Quit in the Pause overlay
+//   - 'completed' Easy mode levelCap (10) cleared
+//
+// Each outcome gets its own title + accent color. Easy 'completed' is the
+// celebration variant — title in green with the trophy emoji, subtitle
+// "Easy Mode Complete", body shows mismatch count for tie-breaker bragging.
+// All others share the "You reached Level N" body.
+//
+// 'gaveUp' suppresses the Share button; sharing a give-up reads weird.
+const VARIANTS = {
+  timeout: {
+    title: "Time's Up!",
+    accentColor: '#ef4444',
+    showShare: true,
+  },
+  mistakes: {
+    title: 'Out of Guesses',
+    accentColor: '#ef4444',
+    showShare: true,
+  },
+  gaveUp: {
+    title: 'See You Next Time',
+    accentColor: '#9ca3af',
+    showShare: false,
+  },
+  completed: {
+    title: '🎉 You Did It!',
+    accentColor: '#10b981',
+    showShare: true,
+  },
+};
+
+const formatMisses = (n) => `${n} miss${n === 1 ? '' : 'es'}`;
+
 function GameOverScreen({
   darkMode,
+  mode,
+  outcome = 'timeout',
   level,
-  onNewGame,
+  totalMismatches = 0,
+  isNewHighScore = false,
+  onPlayAgain,
   onMainMenu,
-  onViewHighScores,
 }) {
+  const cfg = MODES[mode];
+  const variant = VARIANTS[outcome] || VARIANTS.timeout;
+  const isEasyCompletion = outcome === 'completed';
+
+  // Body line:
+  //   Easy completion: "Cleared in 4 misses" — celebrates the tie-breaker
+  //   stat that drives Easy high scores.
+  //   Everything else: "You reached Level N".
+  const bodyText = isEasyCompletion
+    ? `Cleared in ${formatMisses(totalMismatches)}`
+    : `You reached Level ${level}`;
+
+  // Subtitle only shown for Easy completion to label the achievement.
+  const subtitle = isEasyCompletion ? `${cfg.label} Mode Complete` : null;
+
+  const handleShare = async () => {
+    try {
+      const message = isEasyCompletion
+        ? `I cleared Easy mode in ${formatMisses(totalMismatches)} on Match Maestro! 🎴 https://matchmaestro.app`
+        : `I reached Level ${level} in ${cfg.label} mode on Match Maestro! 🎴 https://matchmaestro.app`;
+      await Share.share({ message });
+    } catch (error) {
+      console.error('Share error:', error);
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight }]}>
-      <View style={[styles.content, { justifyContent: 'center' }]}>
-        <View style={[styles.card, { backgroundColor: darkMode ? '#16213e' : '#ffffff' }]}>
-          <Text style={[styles.title, { color: darkMode ? '#ffffff' : '#000000' }]}>
-            Game Over!
-          </Text>
-          <Text style={[styles.label, styles.levelReached, { color: darkMode ? '#ffffff' : '#000000' }]}>
-            Level Reached: {level}
-          </Text>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight },
+      ]}
+    >
+      <View style={styles.center}>
+        <GlassPanel style={styles.panel}>
+          {isNewHighScore && (
+            <Text
+              style={[styles.callout, { color: cfg.tint }]}
+              accessibilityLabel="New high score"
+            >
+              🎉 New high score!
+            </Text>
+          )}
 
-          {/* Cyan: positive primary "try again" action */}
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#06b6d4' }]}
-            onPress={onNewGame}
-            accessibilityRole="button"
-            accessibilityLabel="New game in the same mode"
+          <Text
+            style={[styles.title, { color: variant.accentColor }]}
+            accessibilityRole="header"
           >
-            <Text style={styles.buttonText}>New Game</Text>
-          </TouchableOpacity>
+            {variant.title}
+          </Text>
 
-          {/* Default blue: neutral navigation back to menu */}
-          <TouchableOpacity
+          {subtitle && (
+            <Text style={[styles.subtitle, { color: cfg.tint }]}>
+              {subtitle}
+            </Text>
+          )}
+
+          <Text style={styles.body}>{bodyText}</Text>
+
+          {variant.showShare && (
+            <GlassButton
+              tintColor={cfg.tint}
+              onPress={handleShare}
+              style={styles.button}
+              accessibilityLabel="Share your result"
+            >
+              <Text style={styles.buttonText}>Share</Text>
+            </GlassButton>
+          )}
+
+          <GlassButton
+            tintColor="#06b6d4"
+            onPress={onPlayAgain}
             style={styles.button}
+            accessibilityLabel={`Play ${cfg.label} mode again`}
+          >
+            <Text style={styles.buttonText}>Play Again</Text>
+          </GlassButton>
+
+          <GlassButton
+            tintColor="#ef4444"
             onPress={onMainMenu}
-            accessibilityRole="button"
-            accessibilityLabel="Back to main menu"
+            style={styles.button}
+            accessibilityLabel="Return to mode select"
           >
             <Text style={styles.buttonText}>Main Menu</Text>
-          </TouchableOpacity>
-
-          {/* Purple: high scores, matches the landing screen color */}
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: '#9333ea' }]}
-            onPress={onViewHighScores}
-            accessibilityRole="button"
-            accessibilityLabel="View high scores"
-          >
-            <Text style={styles.buttonText}>View High Scores</Text>
-          </TouchableOpacity>
-        </View>
+          </GlassButton>
+        </GlassPanel>
       </View>
     </SafeAreaView>
   );
@@ -73,48 +159,55 @@ function GameOverScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // Phase 3: Android safe-area fix (BUILD_LOG known issues).
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  content: {
+  center: {
     flex: 1,
-    padding: 16,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
-  card: {
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  panel: {
+    borderRadius: 20,
+    padding: 24,
+    alignSelf: 'stretch',
+    maxWidth: 480, // Tablet cap so the panel doesn't sprawl on iPad.
+    alignItems: 'stretch',
+  },
+  callout: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.4,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  label: {
+  subtitle: {
     fontSize: 16,
-    marginVertical: 8,
-  },
-  levelReached: {
-    fontSize: 20,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 8,
+  },
+  body: {
+    fontSize: 18,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   button: {
-    backgroundColor: '#2563eb',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
-    marginVertical: 8,
+    marginTop: 12,
   },
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 

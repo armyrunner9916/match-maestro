@@ -113,6 +113,12 @@ export default function App() {
   // with Resume / Quit buttons. Reset by startGame.
   const [isPaused, setIsPaused] = useState(false);
 
+  // Phase 8.2: tracks whether the run that just ended set a new high score
+  // for its mode — drives the "🎉 New high score!" callout on the Game Over
+  // screen. Computed by endGame against pre-update modeStats. Reset by
+  // startGame.
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
   const [cardBackColor, setCardBackColor] = useState('blue');
@@ -359,6 +365,7 @@ export default function App() {
     setMistakesThisLevel(0);
     setGameOutcome(null);
     setIsPaused(false);
+    setIsNewHighScore(false);
     triggerHaptic('impact');
   };
 
@@ -402,8 +409,11 @@ export default function App() {
 
     // Per-mode stats. Easy tracks completion + tie-breaker; the others
     // track best level reached. Only update when there's something to
-    // record (lr > 0 OR an Easy completion).
+    // record (lr > 0 OR an Easy completion). Phase 8.2: compute
+    // `newHighScore` against pre-update modeStats so the Game Over screen
+    // can surface the "🎉 New high score!" callout.
     const isEasyCompletion = mode === 'easy' && outcome === 'completed';
+    let newHighScore = false;
     if (lr > 0 || isEasyCompletion) {
       const next = { ...modeStats };
 
@@ -416,16 +426,23 @@ export default function App() {
             fewestMismatches === null
               ? totalMismatches
               : Math.min(fewestMismatches, totalMismatches);
+          // First completion ever, or completed with fewer misses than the
+          // previous best, both count as a new Easy high score.
+          newHighScore =
+            !prev.completed ||
+            totalMismatches < (prev.fewestMismatches ?? Infinity);
         }
         next.easy = { completed, fewestMismatches };
       } else {
         const prevBest = next[mode]?.bestLevel ?? 0;
+        if (lr > prevBest) newHighScore = true;
         next[mode] = { bestLevel: Math.max(prevBest, lr) };
       }
 
       setModeStats(next);
       persistModeStats(next);
     }
+    setIsNewHighScore(newHighScore);
   }, [mode, levelReached, playerName, highScores, modeStats, totalMismatches, triggerHaptic]);
 
   // Advance to the next level. Called when all pairs in the current level
@@ -652,13 +669,13 @@ export default function App() {
       <>
         <GameOverScreen
           darkMode={darkMode}
+          mode={mode}
+          outcome={gameOutcome ?? 'timeout'}
           level={level}
-          onNewGame={() => startGame(mode)}
+          totalMismatches={totalMismatches}
+          isNewHighScore={isNewHighScore}
+          onPlayAgain={() => startGame(mode)}
           onMainMenu={() => setGameState('landing')}
-          onViewHighScores={() => {
-            setShowHighScores(true);
-            setGameState('landing');
-          }}
         />
         {modals}
       </>
