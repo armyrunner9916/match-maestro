@@ -86,16 +86,19 @@ export async function migrateLegacyStorage() {
 // slice that wasn't present so callers can apply their own defaults.
 // modeStats is special-cased: it falls back to DEFAULT_MODE_STATS so callers
 // always get a fully-shaped object.
+//
+// Phase 8 cleanup: legacy top-10 `highScores` no longer surfaced —
+// HighScoresModal is gone, per-mode stats live on the mode tiles. The
+// storage key itself still exists and the v3 migration still reads it to
+// seed modeStats.normal.bestLevel for upgrading 1.x users.
 export async function loadAllData() {
   try {
-    const [savedScores, savedSettings, savedPremium, savedModeStats] = await Promise.all([
-      AsyncStorage.getItem(STORAGE_KEYS.highScores),
+    const [savedSettings, savedPremium, savedModeStats] = await Promise.all([
       AsyncStorage.getItem(STORAGE_KEYS.settings),
       AsyncStorage.getItem(STORAGE_KEYS.premium),
       AsyncStorage.getItem(STORAGE_KEYS.modeStats),
     ]);
     return {
-      highScores: savedScores ? JSON.parse(savedScores) : null,
       settings: savedSettings ? JSON.parse(savedSettings) : null,
       isPremium: savedPremium ? JSON.parse(savedPremium) : null,
       modeStats: savedModeStats ? JSON.parse(savedModeStats) : cloneDefaultModeStats(),
@@ -103,7 +106,6 @@ export async function loadAllData() {
   } catch (error) {
     console.error('Error loading game data:', error);
     return {
-      highScores: null,
       settings: null,
       isPremium: null,
       modeStats: cloneDefaultModeStats(),
@@ -119,13 +121,9 @@ export async function saveSettings(settings) {
   }
 }
 
-export async function saveHighScores(scores) {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.highScores, JSON.stringify(scores));
-  } catch (error) {
-    console.error('Error saving high scores:', error);
-  }
-}
+// saveHighScores removed in Phase 8 — legacy top-10 array no longer
+// written. The STORAGE_KEYS.highScores constant + v3 migration read still
+// exist to seed modeStats for upgrading 1.x users on first launch.
 
 export async function savePremium(isPremium) {
   try {

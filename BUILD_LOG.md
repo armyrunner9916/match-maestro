@@ -729,6 +729,20 @@ and verification path to a real 2.0 release.
   visual reference app — same designer hand. When stuck on a
   visual decision (palette, tile structure, glass treatment), look
   there first before guessing.
+- **Per-mode Stats modal — post-2.0 work.** Phase 8 dropped the
+  legacy top-10 HighScoresModal because mixing modes in one list
+  was confusing and per-mode best lives on the mode tiles. A
+  future Stats modal should bring back a richer dashboard, broken
+  down per mode. Suggested shape:
+  - Easy: completion badge ✓, fewest misses, attempts
+  - Normal: best level, total runs, average level
+  - Hard: best level, total runs
+  - Challenge: best level, total runs, perfect levels (0 misses)
+  Reachable from a small icon in the mode-select header (next to
+  Settings ⚙️ — maybe 📊). Uses GlassPanel + per-mode tinted
+  cards. Reads from modeStats which already persists the core
+  data; adding fields like attempts/perfect-levels requires
+  modeStats schema extension + a v4 storage migration.
 - **Worktree workflow:** the project lives in two paths
   simultaneously — main checkout at `/Users/stevereitz/app-code/MatchMaestro/`
   (where Xcode opens) and the active worktree at

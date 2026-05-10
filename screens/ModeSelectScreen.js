@@ -105,7 +105,6 @@ function ModeSelectScreen({
   modeStats,
   onSelectMode,
   onOpenSettings,
-  onOpenHighScores,
   isPremium,
   onOpenPremium,
   onRestorePurchases,
@@ -181,16 +180,9 @@ function ModeSelectScreen({
           </View>
         </View>
 
-        {/* High Scores — separated from premium block by a generous gap */}
-        <GlassButton
-          tintColor="#3b82f6"
-          onPress={onOpenHighScores}
-          style={styles.actionButton}
-          accessibilityLabel="View high scores"
-        >
-          <Text style={styles.actionButtonText}>🏆  High Scores</Text>
-        </GlassButton>
-
+        {/* High Scores button removed in Phase 8 cleanup. Per-mode best
+            stats live on the tiles above; a per-mode Stats modal is
+            queued for post-2.0 (see BUILD_LOG open notes). */}
         <View style={styles.premiumBlock}>
           {!isPremium && (
             <GlassButton
@@ -304,9 +296,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
+  // Phase 8 cleanup: tile dimensions grew to absorb the vertical space
+  // freed by removing the High Scores button (minHeight 140 → 180,
+  // padding 16 → 20, label 20pt → 24pt). 2x2 grid now fills the bottom
+  // half of the screen more comfortably on phones; iPad tiles read more
+  // like cards than chips.
   tile: {
     borderRadius: 16,
-    minHeight: 140,
+    minHeight: 180,
   },
   tileFill: {
     flex: 1,
@@ -314,22 +311,22 @@ const styles = StyleSheet.create({
   },
   tileTextStack: {
     flex: 1,
-    padding: 16,
+    padding: 20,
     justifyContent: 'flex-start',
   },
   tileLabel: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   tileHint: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#ffffff',
     marginBottom: 4,
   },
   tileStat: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     opacity: 0.9,
     marginTop: 'auto',

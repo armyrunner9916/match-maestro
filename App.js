@@ -10,7 +10,6 @@ import {
   loadAllData,
   migrateLegacyStorage,
   saveSettings as persistSettings,
-  saveHighScores as persistHighScores,
   savePremium as persistPremium,
   saveModeStats as persistModeStats,
 } from './game/storage';
@@ -18,10 +17,12 @@ import {
 import ModeSelectScreen from './screens/ModeSelectScreen';
 import PauseOverlay from './screens/PauseOverlay';
 import LevelUpToast from './screens/LevelUpToast';
+// HighScoresModal removed in Phase 8 cleanup — per-mode best level lives
+// on the mode tiles in ModeSelectScreen; the top-10 array mixed modes
+// confusingly. A future per-mode Stats modal is noted in BUILD_LOG.
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import SettingsModal from './screens/SettingsModal';
-import HighScoresModal from './screens/HighScoresModal';
 import PremiumModal from './screens/PremiumModal';
 
 // Layout constants used by cardSize. These mirror the actual style values in
@@ -129,14 +130,11 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [cardBackColor, setCardBackColor] = useState('blue');
   const [showSettings, setShowSettings] = useState(false);
-  const [showHighScores, setShowHighScores] = useState(false);
-  const [highScores, setHighScores] = useState([]);
   const [hapticEnabled, setHapticEnabled] = useState(true);
 
-  // Phase 4: per-mode stats (best level / completion). Lives alongside the
-  // legacy `highScores` array; both are written on game end during the
-  // transition. HighScoresModal still consumes the legacy array. Phase 3/8
-  // will replace that consumer and we can drop the dual write.
+  // Phase 4: per-mode stats (best level / completion). Phase 8 cleanup
+  // dropped the legacy `highScores` dual-write — modeStats is the sole
+  // source of truth for run history now.
   const [modeStats, setModeStats] = useState({
     easy: { completed: false, fewestMismatches: null },
     normal: { bestLevel: 0 },
@@ -264,13 +262,11 @@ export default function App() {
       await migrateLegacyStorage();
 
       const {
-        highScores: savedScores,
         settings: savedSettings,
         isPremium: savedPremium,
         modeStats: savedModeStats,
       } = await loadAllData();
 
-      if (savedScores) setHighScores(savedScores);
       if (savedModeStats) setModeStats(savedModeStats);
 
       if (savedSettings) {
@@ -398,21 +394,11 @@ export default function App() {
     // fall back to the state value.
     const lr = explicitLevelReached ?? levelReached;
 
-    // Legacy top-10 array — kept for HighScoresModal until Phase 8
-    // replaces that consumer. Same logic as before, now using lr.
-    if (lr > 0) {
-      const newScore = {
-        name: playerName,
-        level: lr,
-        date: new Date().toISOString(),
-      };
-
-      const updatedScores = [newScore, ...highScores]
-        .sort((a, b) => b.level - a.level)
-        .slice(0, 10);
-      setHighScores(updatedScores);
-      persistHighScores(updatedScores);
-    }
+    // Phase 8 cleanup: the legacy top-10 array (matchMaestro:highScores)
+    // is no longer written. HighScoresModal is gone; per-mode best level
+    // lives on the mode tiles. The storage key + v3 migration step are
+    // preserved so existing 1.x users still get their max level seeded
+    // into modeStats.normal.bestLevel on first 2.0 launch.
 
     // Per-mode stats. Easy tracks completion + tie-breaker; the others
     // track best level reached. Only update when there's something to
@@ -450,7 +436,7 @@ export default function App() {
       persistModeStats(next);
     }
     setIsNewHighScore(newHighScore);
-  }, [mode, levelReached, playerName, highScores, modeStats, totalMismatches, triggerHaptic]);
+  }, [mode, levelReached, modeStats, totalMismatches, triggerHaptic]);
 
   // Advance to the next level. Called when all pairs in the current level
   // are matched. Phase 6.4: now records `levelReached` correctly — the
@@ -609,12 +595,6 @@ export default function App() {
         hapticEnabled={hapticEnabled}
         setHapticEnabled={setHapticEnabled}
       />
-      <HighScoresModal
-        visible={showHighScores}
-        onClose={() => setShowHighScores(false)}
-        darkMode={darkMode}
-        highScores={highScores}
-      />
       <PremiumModal
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
@@ -637,7 +617,6 @@ export default function App() {
           modeStats={modeStats}
           onSelectMode={startGame}
           onOpenSettings={() => setShowSettings(true)}
-          onOpenHighScores={() => setShowHighScores(true)}
           isPremium={isPremium}
           onOpenPremium={() => setShowPremiumModal(true)}
           onRestorePurchases={handleRestorePurchases}
