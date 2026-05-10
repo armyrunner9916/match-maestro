@@ -10,11 +10,12 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `8a674d9 ios: lock iPad to portrait orientation`
+**Last commit:** `6444321 Phase 4: Modes config — pure logic for Easy/Normal/Hard/Challenge`
 **Working tree:** clean, all commits pushed
 **App state:** builds and runs on iOS simulator (iPhone Air + iPad Pro
-11-inch verified). Liquid Glass aesthetic is now visible in the Settings
-modal; mode-select redesign comes next phases out.
+11-inch verified). Mode logic now exists end-to-end but only `normal` is
+reachable from the UI; Phase 3 (mode select) will surface Easy/Hard/
+Challenge and bring the dominant Liquid Glass aesthetic.
 
 ### Commits so far (oldest → newest)
 
@@ -28,6 +29,8 @@ ab1439f docs: add BUILD_LOG.md as session-resume guide
 1afa81f Phase 2: SVG card backs
 ce131b2 Phase 7: Settings refresh — SVG picker + Liquid Glass
 8a674d9 ios: lock iPad to portrait orientation
+9dd687e docs: update BUILD_LOG with Phase 2, Phase 7, and orientation lock
+6444321 Phase 4: Modes config — pure logic for Easy/Normal/Hard/Challenge
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
@@ -45,9 +48,9 @@ phases done in the order that minimizes rework, not in numerical order:
 1. ✅ **Phase 1 + 9** — foundation + tech debt
 2. ✅ **Phase 2** — SVG card backs
 3. ✅ **Phase 7** — settings refresh (uses Phase 2 card backs)
-4. ⏭️ **Phase 4** — modes config (pure logic) ← **NEXT**
+4. ✅ **Phase 4** — modes config (pure logic)
 5. ⏭️ **Phase 3** — mode select screen (consumes Phase 4) — *Liquid
-   Glass becomes the dominant aesthetic of the app here*
+   Glass becomes the dominant aesthetic of the app here* ← **NEXT**
 6. ⏭️ **Phase 6 + 8** — in-game UX + game over redesign
 7. ⏭️ **Phase 5** — Daily Challenge (last; deferrable to 2.1)
 8. ⏭️ **Phase 10** — QA + ship
@@ -151,6 +154,53 @@ card backs have ("card edge" feel).
 - **7.4 Top-corner sound + dark-mode icons** — ⏸️ deferred to Phase 3
   (depends on the new mode-select header).
 
+### Phase 4 — Modes config ✅
+
+Pure logic, no UI. All four difficulties live in `game/modes.js` as the
+single source of truth. `startGame` and `nextLevel` consume `MODES[mode]`
+instead of hardcoded values. Default mode is `'normal'` so existing
+behavior is preserved verbatim until Phase 3 wires the mode-select UI.
+
+| Mode | pairsStart | timerStart | timerDelta | mismatchPenalty | levelCap | mistakeBudget |
+|---|---|---|---|---|---|---|
+| Easy | 2 | 20 | +5 | 0 | 10 | — |
+| Normal | 2 | 15 | +3 | 0 | — | — |
+| Hard | 4 | 12 | +2 | 2s | — | — |
+| Challenge | 6 | null (no timer) | 0 | 0 | — | 1 |
+
+- **4.1 `MODES` config** — Single source of truth + `DEFAULT_MODE`,
+  `MODE_IDS`, `DEFAULT_MODE_STATS`, `isValidMode()`. Adding a new mode
+  is a single entry.
+- **4.2 Mode threading** — `startGame(modeId = mode)` pulls level-1
+  settings from MODES; `nextLevel` reads timer/pair deltas from MODES
+  and resets the per-level Challenge counter.
+- **4.3 v3 storage migration** — New `matchMaestro:modeStats` key
+  alongside the legacy top-10 array. v3 step seeds `normal.bestLevel`
+  from the legacy array's max level so existing players keep their
+  progress. `endGame` dual-writes both shapes during the transition;
+  Phase 3/8 will rip out the legacy array when HighScoresModal is
+  replaced. `STORAGE_MIGRATION_VERSION` bumped to `'v3'`.
+- **4.4 Hard mode mismatchPenalty** — `handleCardPress` mismatch branch
+  subtracts `cfg.mismatchPenalty` seconds from `timeLeft`, clamped at 0.
+  No-op for non-Hard modes.
+- **4.5 Challenge mode mistakeBudget** — `mistakesThisLevel` state,
+  reset by `nextLevel`. Run ends with outcome `'mistakes'` on the
+  (budget+1)th mismatch in a level. Timer effect early-returns when
+  `timeLimit === null` so Challenge runs without a clock.
+- **4.6 Easy mode levelCap** — `nextLevel` checks `level >= levelCap`
+  before advancing; if hit, ends the run with outcome `'completed'`
+  and records `fewestMismatches` (cumulative `totalMismatches` across
+  the run) as the tie-breaker. Phase 8 will surface the celebration UI.
+- **GameScreen** takes a `hasTimer` prop; the Time text is replaced by
+  an empty flex spacer in Challenge mode. Phase 3 will redesign the
+  full header.
+- **`gameOutcome` state** — `'timeout' | 'completed' | 'mistakes' |
+  'gaveUp'`. Set by `endGame`; consumed by Phase 8's redesigned Game
+  Over screen. Existing GameOverScreen ignores it for now.
+- **`endGame` reordered above `nextLevel`** — `nextLevel` now calls
+  `endGame('completed')` for the Easy levelCap path, and useCallback
+  closes over its deps at render time, so endGame must be in scope.
+
 ### iPad portrait lock ✅
 
 `UISupportedInterfaceOrientations~ipad` was retaining all four
@@ -202,57 +252,46 @@ Maestro's UX is vertical-first.
 10. **iPad portrait lock applied tonight** — caught the Info.plist
     iPad-orientations drift before it could ship; same fix Taplight
     needed.
+11. **Dual-write storage during Phase 4 transition** — the legacy
+    top-10 array (`matchMaestro:highScores`) is preserved alongside
+    the new per-mode shape (`matchMaestro:modeStats`) until Phase 3/8
+    rebuilds HighScoresModal. Keeps Phase 4 pure-logic and avoids
+    breaking the existing modal. Brief dual-write code to delete in
+    Phase 3/8.
+12. **`gameOutcome` state added in Phase 4** — even though the existing
+    GameOverScreen ignores it. Outcome distinction is required by
+    Phase 4 correctness (the `'completed'` path writes Easy mode's
+    `completed: true` flag); Phase 8 will surface the celebration UI.
+13. **Mistake budget interpreted as "free mistakes per level"** —
+    `mistakeBudget: 1` means one free mistake; the second ends the
+    run. Per-level counter resets on level advance. Spec wording
+    ("end on the second mistake") confirmed this reading.
 
 ---
 
-## Next: Phase 4 — Modes config
+## Next: Phase 3 — Mode select screen
 
-Pure logic, no UI. Builds the single source of truth at `game/modes.js`
-for all four difficulties — pair counts, timer rules, mismatch penalty,
-level cap, share permissions, etc. Phase 3 (the visible mode-select
-screen) consumes this config.
+Visible UI consuming Phase 4's MODES config. The Liquid Glass aesthetic
+becomes the dominant visual language of the app here, replacing the
+current LandingScreen with a mode-select grid (Easy / Normal / Hard /
+Challenge cards).
 
-### Phase 4 work plan
+### Phase 3 work plan (high level — flesh out at start of session)
 
-1. Create `game/modes.js` with the `MODES` config object exactly as
-   spec'd in the plan (Easy / Normal / Hard / Challenge):
-   ```js
-   export const MODES = {
-     easy:      { pairsStart: 2, timerStart: 20, timerDelta: +5,
-                  mismatchPenalty: 0, levelCap: 10, ... },
-     normal:    { pairsStart: 2, timerStart: 15, timerDelta: +3, ... },
-     hard:      { pairsStart: 4, timerStart: 12, timerDelta: +2,
-                  mismatchPenalty: 2, ... },
-     challenge: { pairsStart: 6, timerStart: null, mistakeBudget: 1, ... },
-   };
-   ```
-
-2. Thread a `mode` argument into `startGame(mode)` and `nextLevel`
-   so they consult `MODES[mode]` instead of hardcoded values.
-
-3. Migrate the existing `memoryMatchHighScores` array shape to the
-   per-mode shape:
-   ```js
-   { easy: { completed: false, fewestMismatches: null },
-     normal: { bestLevel: 0 }, hard: { bestLevel: 0 },
-     challenge: { bestLevel: 0 } }
-   ```
-   Migration runs once on first 2.0 launch — copy current best level
-   into `normal.bestLevel`. Slot into the existing `migrateLegacyStorage`
-   in `game/storage.js`, bump `STORAGE_MIGRATION_VERSION` to `'v3'`.
-
-4. Implement Hard mode's `mismatchPenalty: -2s` in `handleCardPress`
-   (only triggers in Hard mode; gated by `MODES[mode].mismatchPenalty > 0`).
-
-5. Implement Challenge mode's `mistakeBudget: 1` — track mistakes
-   per level, end the run on the second mistake. Reset counter on
-   level advance.
-
-6. Implement Easy mode's `levelCap: 10` — completing level 10 ends
-   the run with a "complete" state, not a game-over (Phase 8 will
-   surface the celebration screen).
-
-After Phase 4, Phase 3 builds the mode-select UI consuming this config.
+1. Replace `LandingScreen.js` with `ModeSelectScreen.js` (or rename
+   in place). Four `GlassCard` mode tiles in a 2×2 grid, each showing
+   the mode label + a one-line difficulty hint + the per-mode stat
+   from `modeStats` (best level / Easy completion badge).
+2. Tap on a mode card calls `startGame(modeId)` — already wired in
+   App.js (Phase 4 gave `startGame` the `modeId` arg).
+3. Move dark-mode + sound icons from the in-game header into the
+   mode-select header (Phase 7.4 deferred).
+4. Apply Taplight's Android safe-area pattern to the new screen's
+   outer container (see Known Issues below). Roll the same fix into
+   every other screen at the same time, not just mode select.
+5. After Phase 3 ships, the legacy top-10 highScores array becomes
+   redundant (modeStats covers all displayed data). Decide whether
+   to drop the dual-write in Phase 3 or wait for Phase 8.
 
 ---
 
