@@ -13,6 +13,8 @@ import {
   StatusBar,
 } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 import GlassCard from '../components/GlassCard';
 import GlassButton from '../components/GlassButton';
 import { MODE_IDS, MODES } from '../game/modes';
@@ -66,9 +68,26 @@ const ModeTile = ({ modeId, modeStats, onPress }) => {
     >
       <GlassCard style={styles.tile}>
         <View style={[styles.tileFill, { backgroundColor: cfg.tileBg }]}>
-          <Text style={styles.tileLabel}>{cfg.label}</Text>
-          <Text style={styles.tileHint}>{cfg.hint}</Text>
-          <Text style={styles.tileStat}>{formatModeStat(modeId, modeStats)}</Text>
+          {/* Glossy gradient overlay: bright at the top, neutral mid,
+              slight shadow at the bottom — gives the tile dimension and
+              a "lit from above" Liquid Glass feel. */}
+          <LinearGradient
+            colors={[
+              'rgba(255,255,255,0.22)',
+              'rgba(255,255,255,0.04)',
+              'rgba(0,0,0,0.18)',
+            ]}
+            locations={[0, 0.55, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.tileTextStack}>
+            <Text style={styles.tileLabel}>{cfg.label}</Text>
+            <Text style={styles.tileHint}>{cfg.hint}</Text>
+            <Text style={styles.tileStat}>{formatModeStat(modeId, modeStats)}</Text>
+          </View>
         </View>
       </GlassCard>
     </Pressable>
@@ -286,6 +305,10 @@ const styles = StyleSheet.create({
     minHeight: 140,
   },
   tileFill: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  tileTextStack: {
     flex: 1,
     padding: 16,
     justifyContent: 'flex-start',
