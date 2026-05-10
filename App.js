@@ -17,6 +17,7 @@ import {
 
 import ModeSelectScreen from './screens/ModeSelectScreen';
 import PauseOverlay from './screens/PauseOverlay';
+import LevelUpToast from './screens/LevelUpToast';
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import SettingsModal from './screens/SettingsModal';
@@ -118,6 +119,11 @@ export default function App() {
   // screen. Computed by endGame against pre-update modeStats. Reset by
   // startGame.
   const [isNewHighScore, setIsNewHighScore] = useState(false);
+
+  // Phase 6.3: when set, a LevelUpToast renders over GameScreen with this
+  // upcoming level number. Cleared after the toast's 850ms animation, at
+  // which point nextLevel actually advances the game. null = no toast.
+  const [levelUpToastLevel, setLevelUpToastLevel] = useState(null);
 
   // Settings state
   const [darkMode, setDarkMode] = useState(true);
@@ -366,6 +372,7 @@ export default function App() {
     setGameOutcome(null);
     setIsPaused(false);
     setIsNewHighScore(false);
+    setLevelUpToastLevel(null);
     triggerHaptic('impact');
   };
 
@@ -531,7 +538,25 @@ export default function App() {
           triggerHaptic('success');
 
           if (newMatchedPairs.length === pairs) {
-            nextLevel();
+            // All pairs cleared. Phase 6.3: light celebration toast between
+            // levels — except when Easy's levelCap is about to end the
+            // run (Game Over screen has its own celebration variant).
+            const isCapReached =
+              cfg.levelCap !== null && level >= cfg.levelCap;
+            if (isCapReached) {
+              nextLevel(); // will trigger endGame('completed')
+              setIsProcessingMatch(false);
+            } else {
+              setLevelUpToastLevel(level + 1);
+              // Hold isProcessingMatch true through the toast so the
+              // timer doesn't tick to zero during celebration.
+              setTimeout(() => {
+                setLevelUpToastLevel(null);
+                nextLevel();
+                setIsProcessingMatch(false);
+              }, 850);
+            }
+            return; // skip the trailing setIsProcessingMatch below
           }
         } else {
           // Mismatch. Phase 4 layers three mode-specific effects on top of
@@ -651,6 +676,12 @@ export default function App() {
           onCardPress={handleCardPress}
           onPause={() => setIsPaused(true)}
         />
+        {levelUpToastLevel !== null && (
+          <LevelUpToast
+            level={levelUpToastLevel}
+            modeTint={MODES[mode].tint}
+          />
+        )}
         <PauseOverlay
           visible={isPaused}
           onResume={() => setIsPaused(false)}
