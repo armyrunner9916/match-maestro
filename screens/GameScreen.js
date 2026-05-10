@@ -21,6 +21,7 @@ function GameScreen({
   level,
   timeLeft,
   hasTimer = true,
+  mistakesLeft = null,
   cards,
   flippedCards,
   cardSize,
@@ -39,6 +40,19 @@ function GameScreen({
               style={styles.bannerImage}
               resizeMode="contain"
             />
+
+            {/* Phase 3: mistake counter for modes with a budget (Challenge).
+                Sits directly under the logo; modes without a budget skip
+                rendering this row entirely. */}
+            {mistakesLeft !== null && (
+              <Text
+                style={styles.mistakesIndicator}
+                accessibilityLabel={`${mistakesLeft} mistakes remaining`}
+                accessibilityLiveRegion="polite"
+              >
+                Mistakes left: {mistakesLeft}
+              </Text>
+            )}
 
             <View style={styles.timerRow}>
               <Text
@@ -133,6 +147,16 @@ const styles = StyleSheet.create({
   timer: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  mistakesIndicator: {
+    fontSize: 16,
+    fontWeight: '700',
+    // Light purple matches the Challenge brand tint at higher luminance
+    // for readable contrast over the navy bg. Phase 6 will wrap this
+    // line in a GlassPanel header alongside level/timer.
+    color: '#d8b4fe',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   timerRow: {
     flexDirection: 'row',

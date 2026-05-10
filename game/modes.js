@@ -69,11 +69,12 @@ export const MODES = {
     timerDelta: 0,
     mismatchPenalty: 0,
     levelCap: null,
-    // Function form: budget scales with pair count. (pairs - 3) gives 3 at
-    // level 1 / 4 at level 2 / 5 at level 3, which is enough to acquire
-    // information from the fresh deck without dying on the first flip.
-    // Per-level — counter resets in nextLevel.
-    mistakeBudget: (pairs) => pairs - 3,
+    // Function form: budget scales with pair count. (pairs + 1) gives 7 at
+    // level 1 / 8 at level 2 / 9 at level 3, which is generous enough to
+    // acquire info from a fresh deck and recover from a few memory slips
+    // without removing all consequence. Per-level — counter resets in
+    // nextLevel.
+    mistakeBudget: (pairs) => pairs + 1,
   },
 };
 

@@ -571,6 +571,16 @@ export default function App() {
   }
 
   if (gameState === 'playing') {
+    // Compute remaining mistakes for modes that have a budget. null in
+    // every other mode → GameScreen hides the indicator.
+    const cfg = MODES[mode];
+    let mistakesLeft = null;
+    if (cfg.mistakeBudget !== null) {
+      const budget = typeof cfg.mistakeBudget === 'function'
+        ? cfg.mistakeBudget(pairs)
+        : cfg.mistakeBudget;
+      mistakesLeft = Math.max(0, budget - mistakesThisLevel);
+    }
     return (
       <>
         <GameScreen
@@ -578,6 +588,7 @@ export default function App() {
           level={level}
           timeLeft={timeLeft}
           hasTimer={timeLimit !== null}
+          mistakesLeft={mistakesLeft}
           cards={cards}
           flippedCards={flippedCards}
           cardSize={cardSize}
