@@ -436,11 +436,17 @@ export default function App() {
   // Handle a card tap during gameplay.
   const handleCardPress = useCallback((cardId) => {
     if (gameState !== 'playing' || isProcessingMatch) return;
+    const cfg = MODES[mode];
 
     const clickedCard = cards.find(card => card.id === cardId);
     if (clickedCard.isMatched) return;
 
     if (flippedCards.includes(cardId)) {
+      // Phase 3 polish: Challenge mode locks the first flip — players
+      // can't tap a card to peek and then un-flip without committing,
+      // which would let them learn cards "for free". Other modes still
+      // allow un-flipping so players can correct an accidental tap.
+      if (cfg.lockFirstFlip) return;
       setFlippedCards(flippedCards.filter(id => id !== cardId));
       triggerHaptic('impact');
       return;
@@ -483,7 +489,6 @@ export default function App() {
           // Mismatch. Phase 4 layers three mode-specific effects on top of
           // the existing flip-back: cumulative mismatch tally, Hard mode
           // timer penalty, Challenge mode mistake-budget exhaustion.
-          const cfg = MODES[mode];
           setFlippedCards([]);
           setTotalMismatches(prev => prev + 1);
           triggerHaptic('error');

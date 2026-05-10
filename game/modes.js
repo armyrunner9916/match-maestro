@@ -31,6 +31,7 @@ export const MODES = {
     mismatchPenalty: 0,
     levelCap: 10,
     mistakeBudget: null,
+    lockFirstFlip: false,
   },
   normal: {
     id: 'normal',
@@ -44,6 +45,7 @@ export const MODES = {
     mismatchPenalty: 0,
     levelCap: null,
     mistakeBudget: null,
+    lockFirstFlip: false,
   },
   hard: {
     id: 'hard',
@@ -57,6 +59,7 @@ export const MODES = {
     mismatchPenalty: 1,
     levelCap: null,
     mistakeBudget: null,
+    lockFirstFlip: false,
   },
   challenge: {
     id: 'challenge',
@@ -75,6 +78,10 @@ export const MODES = {
     // without removing all consequence. Per-level — counter resets in
     // nextLevel.
     mistakeBudget: (pairs) => pairs + 1,
+    // No take-backsies: once you flip a card, tapping it again won't
+    // un-flip it. Forces commitment so players can't "peek" at a card
+    // and then back out once they've learned its symbol.
+    lockFirstFlip: true,
   },
 };
 
