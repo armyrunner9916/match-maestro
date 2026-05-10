@@ -15,7 +15,7 @@ import {
   saveModeStats as persistModeStats,
 } from './game/storage';
 
-import LandingScreen from './screens/LandingScreen';
+import ModeSelectScreen from './screens/ModeSelectScreen';
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import SettingsModal from './screens/SettingsModal';
@@ -546,12 +546,13 @@ export default function App() {
   if (gameState === 'landing') {
     return (
       <>
-        <LandingScreen
+        <ModeSelectScreen
           darkMode={darkMode}
           setDarkMode={setDarkMode}
           playerName={playerName}
           setPlayerName={setPlayerName}
-          onStartGame={startGame}
+          modeStats={modeStats}
+          onSelectMode={startGame}
           onOpenSettings={() => setShowSettings(true)}
           onOpenHighScores={() => setShowHighScores(true)}
           isPremium={isPremium}

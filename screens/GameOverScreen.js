@@ -5,7 +5,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import { COLORS } from '../game/constants';
 
 // Interim 3-button layout. Phase 8 will redesign this as a <GlassCard> with:
 // per-mode-aware Game Over / Easy-completion variants, "🎉 New high score!"
@@ -22,7 +25,7 @@ function GameOverScreen({
   onViewHighScores,
 }) {
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#1a1a2e' : '#f5f5f5' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight }]}>
       <View style={[styles.content, { justifyContent: 'center' }]}>
         <View style={[styles.card, { backgroundColor: darkMode ? '#16213e' : '#ffffff' }]}>
           <Text style={[styles.title, { color: darkMode ? '#ffffff' : '#000000' }]}>
@@ -70,6 +73,8 @@ function GameOverScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    // Phase 3: Android safe-area fix (BUILD_LOG known issues).
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   content: {
     flex: 1,

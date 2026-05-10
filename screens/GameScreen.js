@@ -7,10 +7,12 @@ import {
   ScrollView,
   Image,
   StyleSheet,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import Card from '../components/Card';
-import { ADMOB_BANNER_ID } from '../game/constants';
+import { ADMOB_BANNER_ID, COLORS } from '../game/constants';
 
 // Phase 6 will add: pause overlay (replacing Give Up), level-up celebration,
 // per-mode stats panel via <GlassPanel>, and the rotateY card flip animation.
@@ -28,7 +30,7 @@ function GameScreen({
   onEndGame,
 }) {
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#1a1a2e' : '#f5f5f5' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? COLORS.bgNavy : COLORS.bgNavyLight }]}>
       <View style={{ flex: 1 }}>
         <View style={styles.content}>
           <View style={styles.header}>
@@ -107,6 +109,9 @@ function GameScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    // Phase 3: Android safe-area fix (BUILD_LOG known issues). iOS handles
+    // this via SafeAreaView; Android's doesn't account for the status bar.
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   content: {
     flex: 1,

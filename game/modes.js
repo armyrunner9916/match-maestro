@@ -17,6 +17,9 @@
 export const MODES = {
   easy: {
     id: 'easy',
+    label: 'Easy',
+    hint: '10 levels',
+    tint: '#10b981', // brand green
     pairsStart: 2,
     timerStart: 20,
     timerDelta: 5,
@@ -26,6 +29,9 @@ export const MODES = {
   },
   normal: {
     id: 'normal',
+    label: 'Normal',
+    hint: 'Classic',
+    tint: '#f59e0b', // brand amber
     pairsStart: 2,
     timerStart: 15,
     timerDelta: 3,
@@ -35,6 +41,9 @@ export const MODES = {
   },
   hard: {
     id: 'hard',
+    label: 'Hard',
+    hint: '−2s per miss',
+    tint: '#ef4444', // brand red
     pairsStart: 4,
     timerStart: 12,
     timerDelta: 2,
@@ -44,6 +53,9 @@ export const MODES = {
   },
   challenge: {
     id: 'challenge',
+    label: 'Challenge',
+    hint: '1 mistake / level',
+    tint: '#9333ea', // brand purple
     pairsStart: 6,
     timerStart: null,
     timerDelta: 0,
