@@ -186,15 +186,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  // Phase 10 polish: absoluteFillObject + flex centering instead of
+  // `flex: 1, justifyContent: 'center'`. The flex variant was producing
+  // off-center vertical placement on iPad portrait — the panel landed
+  // visibly above the visual midline. absoluteFillObject forces the
+  // wrapper to fill the SafeAreaView's full bounds, which makes the
+  // nested flex centering rock-solid regardless of safe-area quirks.
   center: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
   },
   panel: {
     borderRadius: 20,
     padding: 24,
-    alignSelf: 'stretch',
+    width: '100%',
     maxWidth: 480, // Phone cap. Tablet override below bumps to 600.
     alignItems: 'stretch',
   },
