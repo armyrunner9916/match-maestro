@@ -375,7 +375,7 @@ export default function App() {
 
   // End the current game and persist score if it qualifies. Takes an
   // outcome ('timeout' | 'completed' | 'mistakes' | 'gaveUp') and writes
-  // per-mode stats alongside the legacy top-10 array.
+  // per-mode stats. Phase 8 cleanup dropped the legacy top-10 dual-write.
   //
   // Phase 6.4: reads `levelReached` (post-rename from completedLevel)
   // for storage. Optional `explicitLevelReached` arg lets nextLevel pass

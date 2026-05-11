@@ -20,8 +20,6 @@ import { MODES } from '../game/modes';
 // Phase 6.1: GlassPanel header (mode chip + level + timer/mistakes).
 // Phase 6.2: Pause icon (replaces Give Up button) — wired to onPause prop;
 // the PauseOverlay modal renders separately from App.js.
-//
-// Phase 6 still pending: 6.3 level-up celebration, 6.5 card flip animation.
 function GameScreen({
   mode,
   level,

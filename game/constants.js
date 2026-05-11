@@ -36,8 +36,9 @@ export const STORAGE_KEYS = {
   highScores: 'matchMaestro:highScores',
   settings: 'matchMaestro:settings',
   premium: 'matchMaestro:premium',
-  // Phase 4: per-mode stats. Lives alongside the legacy top-10 array;
-  // the array stays for HighScoresModal until Phase 3/8 redesigns the UI.
+  // Phase 4: per-mode stats. Sole source of truth for run history post
+  // Phase 8 — the legacy `highScores` key is no longer written, kept
+  // only so the v3 migration can seed normal.bestLevel for 1.x users.
   modeStats: 'matchMaestro:modeStats',
 };
 

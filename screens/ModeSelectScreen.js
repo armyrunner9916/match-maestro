@@ -23,14 +23,15 @@ import { COLORS } from '../game/constants';
 // Phase 3 mode-select screen. Replaces LandingScreen.
 //
 // Layout (top → bottom):
-//   header row     : dark/light toggle | banner | settings icon
+//   header row     : invisible spacer | banner | settings icon
+//                    (Phase 10 dropped the dark/light toggle; spacer keeps
+//                     the banner visually centered.)
 //   name input
 //   2x2 grid       : Easy / Normal | Hard / Challenge — each a GlassCard
 //                    tinted with the mode's brand color. Tap = startGame.
-//   spacer (small)
-//   high scores    : full-width GlassButton
-//   spacer (large) : visually separates ad/premium controls from gameplay
 //   premium block  : Remove Ads + Restore Purchases grouped together
+//                    (Phase 8 removed the High Scores button — per-mode
+//                     best stats live on the tiles above.)
 //
 // Android safe-area fix applied here per BUILD_LOG known issues — Phase 3
 // is when the header rebuild made it the natural place to land. Same fix
@@ -49,9 +50,9 @@ const formatModeStat = (modeId, modeStats) => {
   return best > 0 ? `Best: Level ${best}` : 'No runs yet';
 };
 
-// Tile = GlassCard wrapper + solid-color inner View at 85% alpha + white
+// Tile = GlassCard wrapper + solid-color inner View at 92% alpha + white
 // text. Matches the Numlok mode-card styling so the two apps share visual
-// DNA. The 0.85 alpha lets the glass surface peek through subtly without
+// DNA. The 0.92 alpha lets the glass surface peek through subtly without
 // muddying the brand color.
 const ModeTile = ({ modeId, modeStats, onPress }) => {
   const cfg = MODES[modeId];
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   premiumBlock: {
-    marginTop: 24, // generous gap separating from High Scores
+    marginTop: 24, // generous gap separating premium controls from the mode grid
   },
   premiumBadge: {
     backgroundColor: '#d4af37',

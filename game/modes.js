@@ -1,4 +1,5 @@
 // Phase 4: Single source of truth for all four difficulty modes.
+// Adding a new mode = one entry here.
 //
 // Field semantics:
 //   pairsStart       — number of pairs at level 1
@@ -9,14 +10,14 @@
 //                      the cap level ends the run with outcome 'completed'.
 //   mistakeBudget    — free mismatches per level before the run ends
 //                      (so 1 means: end on the second mismatch in a level).
-//                      null = unlimited.
-//
-// Phase 3 will consume this for the mode-select UI; Phase 4 just threads
-// the values through gameplay. Adding a new mode = one entry here.
+//                      null = unlimited. May be a number or a
+//                      `(pairs) => number` function for pair-scaled budgets.
+//   lockFirstFlip    — if true, tapping a face-up card a second time will
+//                      NOT un-flip it. Prevents free peeks.
 
 // Brand colors match Numlok's mode palette (Material 500s) so cross-app
 // branding reads as the same designer's hand. `tint` is the solid hex for
-// labels/headers; `tileBg` is the same color at 85% alpha for tile fills
+// labels/headers; `tileBg` is the same color at 92% alpha for tile fills
 // over a Liquid Glass surface.
 export const MODES = {
   easy: {
@@ -91,9 +92,9 @@ export const MODE_IDS = ['easy', 'normal', 'hard', 'challenge'];
 export const DEFAULT_MODE = 'normal';
 
 // Initial per-mode persisted stats. easy tracks completion + a tie-breaker
-// (fewer mismatches = better); the others track best level reached. Phase 3
-// will use this shape to render mode-select badges; Phase 8 will surface
-// the easy "completed" celebration.
+// (fewer mismatches = better); the others track best level reached. Consumed
+// by ModeSelectScreen's per-tile stat line and by GameOverScreen's Easy
+// completion variant.
 export const DEFAULT_MODE_STATS = {
   easy: { completed: false, fewestMismatches: null },
   normal: { bestLevel: 0 },
