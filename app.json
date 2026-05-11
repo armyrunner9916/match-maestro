@@ -8,6 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "requireFullScreen": true,
       "buildNumber": "8",
       "bundleIdentifier": "com.steveomatic.matchmaestro",
       "infoPlist": {
@@ -17,7 +18,8 @@
             "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
           }
         ],
-        "UIBackgroundModes": []
+        "UIBackgroundModes": [],
+        "UIRequiresFullScreen": true
       },
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-7368779159802085~5957773720"
