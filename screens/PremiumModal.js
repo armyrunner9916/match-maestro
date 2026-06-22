@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
@@ -16,9 +17,20 @@ function PremiumModal({
   onRestore,
 }) {
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => { if (!isLoadingPremium) onClose(); }}
+    >
+      {/* Backdrop tap closes (unless a purchase/restore is in flight); the
+          inner Pressable swallows taps on the card. onRequestClose handles
+          the Android hardware back button. */}
+      <Pressable
+        style={styles.overlay}
+        onPress={() => { if (!isLoadingPremium) onClose(); }}
+      >
+        <Pressable style={styles.card} onPress={() => {}}>
           <Text style={[styles.title, { color: '#d4af37' }]}>💎 Go Premium!</Text>
           <Text style={[styles.label, styles.subtitle]}>
             Remove all ads and enjoy Match Maestro uninterrupted
@@ -64,7 +76,7 @@ function PremiumModal({
             accessibilityLabel="Restore previous purchases"
             accessibilityState={{ disabled: isLoadingPremium }}
           >
-            <Text>🔄 Restore Purchases</Text>
+            <Text style={styles.secondaryButtonText}>🔄 Restore Purchases</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -76,8 +88,8 @@ function PremiumModal({
           >
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -146,6 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     margin: 8,
+  },
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
   },
 });
 

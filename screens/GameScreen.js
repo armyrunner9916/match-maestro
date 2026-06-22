@@ -18,8 +18,9 @@ import { ADMOB_BANNER_ID, COLORS } from '../game/constants';
 import { MODES } from '../game/modes';
 
 // Phase 6.1: GlassPanel header (mode chip + level + timer/mistakes).
-// Phase 6.2: Pause icon (replaces Give Up button) — wired to onPause prop;
-// the PauseOverlay modal renders separately from App.js.
+// Phase 6.2: Pause icon — wired to onPause prop; the PauseOverlay modal
+// renders separately from App.js. Giving up happens via Pause → Quit; the
+// standalone Give Up button was removed to prevent accidental one-tap exits.
 function GameScreen({
   mode,
   level,
@@ -33,7 +34,6 @@ function GameScreen({
   isPremium,
   onCardPress,
   onPause,
-  onGiveUp,
 }) {
   const cfg = MODES[mode];
   return (
@@ -45,6 +45,8 @@ function GameScreen({
               source={require('../assets/banner.png')}
               style={styles.bannerImage}
               resizeMode="contain"
+              accessibilityElementsHidden
+              importantForAccessibility="no"
             />
 
             {/* Status row: GlassPanel info bar + Pause icon button. The
@@ -98,16 +100,6 @@ function GameScreen({
                 accessibilityLabel="Pause the game"
               >
                 <Text style={styles.iconText}>⏸</Text>
-              </GlassButton>
-
-              <GlassButton
-                tintColor="rgba(239,68,68,0.55)"
-                onPress={onGiveUp}
-                style={styles.iconButton}
-                accessibilityLabel="Give up and end this run"
-                accessibilityHint="Ends the current run immediately"
-              >
-                <Text style={styles.iconText}>🛑</Text>
               </GlassButton>
             </View>
           </View>
@@ -209,9 +201,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.45)',
   },
-  // Phase 6.1 + give-up addition: square icon buttons in the header row.
-  // Same dimensions for Pause and Give Up so they read as a paired
-  // toolbar; tint colors differentiate (neutral glass vs red).
+  // Phase 6.1: square icon button in the header row (Pause). Sized to the
+  // 44pt minimum touch target.
   iconButton: {
     width: 44,
     height: 44,

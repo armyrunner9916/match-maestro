@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
 } from 'react-native';
 import GlassPanel from '../components/GlassPanel';
@@ -36,16 +37,25 @@ function SettingsModal({
   setCardBackColor,
   hapticEnabled,
   setHapticEnabled,
+  onOpenMoreGames,
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      {/* Backdrop tap closes; the inner Pressable swallows taps so taps on the
+          panel don't bubble up and dismiss. onRequestClose handles the
+          Android hardware back button. */}
+      <Pressable style={styles.overlay} onPress={onClose}>
         {/* Outer container constrains modal width. GlassPanel inside renders
             a BlurView with a built-in dark overlay on iOS (and a solid
             translucent fallback on Android). We wrap rather than passing
             maxWidth directly because GlassPanel's splitStyle only routes
             `width` (not `maxWidth`) to its outer BlurView wrapper. */}
-        <View style={styles.modalContainer}>
+        <Pressable style={styles.modalContainer} onPress={() => {}}>
           <GlassPanel intensity={60} style={styles.modalPanel}>
             <View style={styles.content}>
               <Text style={styles.title}>Settings</Text>
@@ -103,6 +113,22 @@ function SettingsModal({
               <Text style={styles.toggleState}>{hapticEnabled ? 'ON' : 'OFF'}</Text>
             </GlassButton>
 
+            {/* More Games --------------------------------------------- */}
+            {onOpenMoreGames && (
+              <>
+                <Text style={styles.sectionLabel}>Discover</Text>
+                <GlassButton
+                  tintColor="rgba(255,255,255,0.14)"
+                  onPress={onOpenMoreGames}
+                  accessibilityLabel="More games from this studio"
+                  style={styles.moreGamesButton}
+                >
+                  <Text style={styles.moreGamesText}>🎮 More Games</Text>
+                  <Text style={styles.moreGamesChevron}>›</Text>
+                </GlassButton>
+              </>
+            )}
+
             {/* Close --------------------------------------------------- */}
               <GlassButton
                 tintColor="rgba(37, 99, 235, 0.85)"
@@ -114,8 +140,8 @@ function SettingsModal({
               </GlassButton>
             </View>
           </GlassPanel>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -210,6 +236,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+
+  // More Games row
+  moreGamesButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginBottom: 8,
+  },
+  moreGamesText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  moreGamesChevron: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 22,
+    fontWeight: '600',
   },
 
   // Close

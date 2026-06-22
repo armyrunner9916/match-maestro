@@ -24,6 +24,7 @@ import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import SettingsModal from './screens/SettingsModal';
 import PremiumModal from './screens/PremiumModal';
+import MoreGamesModal from './components/MoreGamesModal';
 
 // Layout constants used by cardSize. These mirror the actual style values in
 // GameScreen.js so the math stays honest:
@@ -79,7 +80,6 @@ initializeRevenueCat();
 export default function App() {
   // Game state
   const [gameState, setGameState] = useState('landing');
-  const [playerName, setPlayerName] = useState('');
   const [mode, setMode] = useState(DEFAULT_MODE);
   const [level, setLevel] = useState(1);
   const [pairs, setPairs] = useState(MODES[DEFAULT_MODE].pairsStart);
@@ -131,6 +131,7 @@ export default function App() {
   // were yanked rather than building out a real light-mode pass.
   const [cardBackColor, setCardBackColor] = useState('blue');
   const [showSettings, setShowSettings] = useState(false);
+  const [showMoreGames, setShowMoreGames] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
 
   // Phase 4: per-mode stats (best level / completion). Phase 8 cleanup
@@ -274,7 +275,6 @@ export default function App() {
         // savedSettings.darkMode is ignored — light mode removed in Phase 10.
         setCardBackColor(savedSettings.cardBackColor || 'blue');
         setHapticEnabled(savedSettings.hapticEnabled ?? true);
-        if (savedSettings.playerName) setPlayerName(savedSettings.playerName);
       }
 
       if (savedPremium !== null) setIsPremium(savedPremium);
@@ -287,8 +287,8 @@ export default function App() {
 
   // Persist settings whenever they change.
   useEffect(() => {
-    persistSettings({ cardBackColor, hapticEnabled, playerName });
-  }, [cardBackColor, hapticEnabled, playerName]);
+    persistSettings({ cardBackColor, hapticEnabled });
+  }, [cardBackColor, hapticEnabled]);
 
   // Haptic feedback helper.
   const triggerHaptic = useCallback((type = 'impact') => {
@@ -324,6 +324,13 @@ export default function App() {
     return () => {
       if (timer) clearTimeout(timer);
     };
+    // `endGame` is intentionally omitted from the deps. Its identity changes
+    // whenever totalMismatches/levelReached/modeStats change — adding it would
+    // re-run this effect on every mismatch, tearing down and recreating the 1s
+    // timeout and silently resetting the player's sub-second timer progress.
+    // The effect already re-runs each tick (timeLeft) and on every gameState/
+    // pause transition, so the captured endGame is never meaningfully stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, gameState, isProcessingMatch, timeLimit, isPaused]);
 
   // Build a fresh shuffled deck of `pairCount` pairs.
@@ -347,10 +354,6 @@ export default function App() {
   // first arg — `MODES[<event>]` is undefined and crashes. Validate and
   // fall back to current `mode` state for any non-string / unknown id.
   const startGame = (modeId) => {
-    if (!playerName.trim()) {
-      Alert.alert('Name Required', 'Please enter your name!');
-      return;
-    }
     const id = isValidMode(modeId) ? modeId : mode;
     const cfg = MODES[id];
     setMode(id);
@@ -481,7 +484,7 @@ export default function App() {
     const cfg = MODES[mode];
 
     const clickedCard = cards.find(card => card.id === cardId);
-    if (clickedCard.isMatched) return;
+    if (!clickedCard || clickedCard.isMatched) return;
 
     if (flippedCards.includes(cardId)) {
       // Phase 3 polish: Challenge mode locks the first flip — players
@@ -594,6 +597,14 @@ export default function App() {
         setCardBackColor={setCardBackColor}
         hapticEnabled={hapticEnabled}
         setHapticEnabled={setHapticEnabled}
+        onOpenMoreGames={() => {
+          setShowSettings(false);
+          setShowMoreGames(true);
+        }}
+      />
+      <MoreGamesModal
+        visible={showMoreGames}
+        onClose={() => setShowMoreGames(false)}
       />
       <PremiumModal
         visible={showPremiumModal}
@@ -609,11 +620,10 @@ export default function App() {
     return (
       <>
         <ModeSelectScreen
-          playerName={playerName}
-          setPlayerName={setPlayerName}
           modeStats={modeStats}
           onSelectMode={startGame}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenMoreGames={() => setShowMoreGames(true)}
           isPremium={isPremium}
           onOpenPremium={() => setShowPremiumModal(true)}
           onRestorePurchases={handleRestorePurchases}
@@ -650,7 +660,6 @@ export default function App() {
           isPremium={isPremium}
           onCardPress={handleCardPress}
           onPause={() => setIsPaused(true)}
-          onGiveUp={() => endGame('gaveUp')}
         />
         {levelUpToastLevel !== null && (
           <LevelUpToast

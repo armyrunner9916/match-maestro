@@ -4,7 +4,6 @@ import {
   ScrollView,
   View,
   Text,
-  TextInput,
   Pressable,
   Image,
   ActivityIndicator,
@@ -26,12 +25,12 @@ import { COLORS } from '../game/constants';
 //   header row     : invisible spacer | banner | settings icon
 //                    (Phase 10 dropped the dark/light toggle; spacer keeps
 //                     the banner visually centered.)
-//   name input
 //   2x2 grid       : Easy / Normal | Hard / Challenge — each a GlassCard
 //                    tinted with the mode's brand color. Tap = startGame.
-//   premium block  : Remove Ads + Restore Purchases grouped together
-//                    (Phase 8 removed the High Scores button — per-mode
-//                     best stats live on the tiles above.)
+//                    (Name entry removed — players jump straight into a mode.)
+//   premium block  : Remove Ads + Restore Purchases + More Games grouped
+//                    together (Phase 8 removed the High Scores button —
+//                    per-mode best stats live on the tiles above.)
 //
 // Android safe-area fix applied here per BUILD_LOG known issues — Phase 3
 // is when the header rebuild made it the natural place to land. Same fix
@@ -99,11 +98,10 @@ const ModeTile = ({ modeId, modeStats, onPress }) => {
 };
 
 function ModeSelectScreen({
-  playerName,
-  setPlayerName,
   modeStats,
   onSelectMode,
   onOpenSettings,
+  onOpenMoreGames,
   isPremium,
   onOpenPremium,
   onRestorePurchases,
@@ -123,6 +121,9 @@ function ModeSelectScreen({
             source={require('../assets/banner.png')}
             style={styles.banner}
             resizeMode="contain"
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel="Match Maestro"
           />
 
           <Pressable
@@ -137,15 +138,6 @@ function ModeSelectScreen({
             <Text style={styles.headerIconText}>⚙️</Text>
           </Pressable>
         </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your name"
-          placeholderTextColor="#9ca3af"
-          value={playerName}
-          onChangeText={setPlayerName}
-          accessibilityLabel="Player name"
-        />
 
         {/* 2x2 mode grid — two rows of `flex: 1` tiles is the canonical RN
             pattern; percentage widths plus margin would overflow. */}
@@ -183,7 +175,10 @@ function ModeSelectScreen({
             </View>
           )}
 
-          {/* Restore Purchases — always visible per App Store guideline 3.1.1 */}
+          {/* Restore Purchases — shown only to non-premium players (once
+              premium, there's nothing to restore). The always-available
+              Restore entry point required by App Store guideline 3.1.1 lives
+              in the Premium modal, which any non-premium player can open. */}
           {!isPremium && (
             <Pressable
               onPress={onRestorePurchases}
@@ -202,6 +197,17 @@ function ModeSelectScreen({
               )}
             </Pressable>
           )}
+
+          {/* More Games — cross-promo for the rest of the studio. Always
+              visible (premium and free players alike). */}
+          <GlassButton
+            tintColor="rgba(255,255,255,0.14)"
+            onPress={onOpenMoreGames}
+            style={styles.moreGamesButton}
+            accessibilityLabel="More games from this studio"
+          >
+            <Text style={styles.moreGamesText}>🎮  More Games</Text>
+          </GlassButton>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -249,17 +255,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 90, // 75% of pre-Phase-3 120px
     marginHorizontal: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    color: '#ffffff',
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   gridContainer: {
     rowGap: GRID_GAP,
@@ -350,6 +345,17 @@ const styles = StyleSheet.create({
   },
   restoreText: {
     fontSize: 14,
+  },
+  moreGamesButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  moreGamesText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
