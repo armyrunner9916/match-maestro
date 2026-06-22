@@ -10,21 +10,23 @@ in executing it.
 
 **Branch:** `main` (tracking `origin/main` on GitHub)
 **Repo:** https://github.com/armyrunner9916/match-maestro
-**Last commit:** `00c1e96 chore: bump version to 2.0.0 for App Store + Play Store submission`
+**Last commit:** `8f057e3 2.1.0: More Games modal, remove name entry, UX/bug fixes`
 **Working tree:** clean, all commits pushed
-**App state:** All gameplay and visual work for 2.0 is complete.
-Phase 10 in progress — light mode dropped, version bumped to 2.0.0
-across all four platform config surfaces. Remaining: real-device
-testing, AdMob + RevenueCat sandbox verification, App Store + Play
-Store metadata/screenshots, production builds (Xcode for iOS, EAS
-for Android), submissions. End-to-end gameplay loop is fully Liquid
-Glass — mode select, in-game header, pause, level-up celebration,
-game over. Card flips animate. Game Over screen is per-mode-aware
-(timeout / mistakes / gaveUp / Easy completion variants) with a
-"🎉 New high score!" callout and a native Share button pointed at
-`https://matchmaestro.app`. In-game header has Pause + Give Up
-icons side-by-side. HighScoresModal removed; per-mode best lives
-on the mode tiles.
+**App state:** 2.0 shipped to both stores. **2.1.0 is the current
+release** — adds a cross-promo More Games modal, removes the
+name-entry gate (players jump straight into a mode), and folds in a
+round of UX/bug fixes (see the 2.1.0 section below). Version
+2.1.0 / iOS build 10 / Android versionCode 6, synced across all five
+platform config surfaces (package.json, app.json, Info.plist,
+project.pbxproj, build.gradle). End-to-end gameplay loop is fully
+Liquid Glass — mode select, in-game header, pause, level-up
+celebration, game over. Card flips animate. Game Over screen is
+per-mode-aware (timeout / mistakes / gaveUp / Easy completion
+variants) with a "New high score!" callout and a native Share button
+pointed at `https://matchmaestro.app`. In-game header has a single
+Pause icon — the standalone Give Up button was removed in 2.1.0
+(quitting goes through Pause → Quit). HighScoresModal removed;
+per-mode best lives on the mode tiles.
 
 Game flow: tap mode tile → play that mode → level-up toast between
 levels → game over variant matches outcome → main menu (returns to
@@ -70,12 +72,59 @@ dbaeeb4 Phase 8 cleanup: remove HighScoresModal, enlarge mode tiles
 cb931ad Phase 10: drop light mode entirely
 d514064 docs: sync BUILD_LOG with Phase 10 kickoff (light-mode dropped)
 00c1e96 chore: bump version to 2.0.0 for App Store + Play Store submission
+7d423a2 docs: BUILD_LOG — version bumps to 2.0.0 complete
+f61df70 docs: stale comment cleanup post Phase 8 + Phase 10
+65d7783 Phase 10 polish: scale Game Over panel up on tablets
+4817cd7 Phase 10 fixes: iPad Game Over vertical centering + Android manifest merge
+bdf6930 Fix: declare UIRequiresFullScreen so iPad portrait-lock is accepted
+8f057e3 2.1.0: More Games modal, remove name entry, UX/bug fixes
 ```
 
 (Note: Phase 1 / Phase 9 / BUILD_LOG / Phase 2 commits have different
 SHAs in the local reflog from when they were created — those were
 rebased onto GitHub's initial commit during the first push. Content is
 identical; just new parent hashes.)
+
+---
+
+## 2.1.0 — post-2.0 update (shipped `8f057e3`)
+
+First update after the 2.0 launch. Tested across all four modes on both
+iOS and Android simulators before tagging. Single feature/fix commit plus
+this doc update.
+
+**Features**
+- **More Games modal** (`components/MoreGamesModal.js`) — cross-promo for the
+  rest of the studio (TapLight, Numlok, WordShift, GridZen2, Unchunked2).
+  Lists each title with icon + tagline, excludes Match Maestro, opens each
+  game's redirect URL via `Linking`. GlassPanel surface on iOS, solid dark
+  card on Android. Surfaced in two places: a "More Games" button on the
+  mode-select screen and a row in the Settings modal. Icons live in
+  `assets/app-icons/` (six 256×256 PNGs).
+- **Name entry removed** — deleted the name `TextInput`, the empty-name
+  `Alert` gate in `startGame`, and the `playerName` state/persistence.
+  Players go straight into a mode. (Name was never used in scores or Game
+  Over, so this was a pure friction removal.)
+
+**UX / bug fixes**
+- Removed the standalone Give Up (🛑) button from the in-game header — a
+  single accidental tap ended the run with no confirm. Quitting now goes
+  through Pause → Quit.
+- Added `onRequestClose` to the Settings and Premium modals so the Android
+  hardware back button dismisses them; both also close on backdrop tap.
+- Fixed unreadable black-on-gray "Restore Purchases" text in the Premium
+  modal (now white).
+- Guarded against an undefined card lookup in `handleCardPress`.
+- Documented why `endGame` is intentionally omitted from the timer effect
+  deps (including it would reset sub-second timer progress on every
+  mismatch).
+- Banner image accessibility: labeled on the home screen, marked decorative
+  in-game.
+
+**Version bump:** 2.1.0 / iOS build 10 / Android versionCode 6, synced
+across package.json, app.json, Info.plist, project.pbxproj, build.gradle.
+The iOS scheme was also flipped to Release (no Debug build needed for a
+mature app absent drastic changes).
 
 ---
 
