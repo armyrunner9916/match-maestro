@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Alert, Platform, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import mobileAds from 'react-native-google-mobile-ads';
@@ -13,6 +13,7 @@ import {
   savePremium as persistPremium,
   saveModeStats as persistModeStats,
 } from './game/storage';
+import { maybeRequestReview } from './game/rating';
 
 import ModeSelectScreen from './screens/ModeSelectScreen';
 import PauseOverlay from './screens/PauseOverlay';
@@ -148,6 +149,18 @@ export default function App() {
   const [isPremium, setIsPremium] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isLoadingPremium, setIsLoadingPremium] = useState(false);
+
+  // Pending gameplay timers. handleCardPress schedules a 600ms match-
+  // resolution timeout and, on a level clear, a nested 850ms level-up-toast
+  // timeout. Both fire async and mutate run state (cards, level, pairs,
+  // isProcessingMatch). If the run ends or restarts inside one of those
+  // windows (e.g. Pause → Quit during the toast), a stale callback would
+  // otherwise fire against the next/ended run — bumping the Game Over level,
+  // or flipping the recorded outcome. We hold their ids so endGame/startGame
+  // can cancel them. Only one of each is ever pending at a time, since
+  // isProcessingMatch blocks a second match from starting.
+  const resolutionTimerRef = useRef(null);
+  const toastTimerRef = useRef(null);
 
   // 9.3: Hook-based dimensions so card layout updates on rotation and iPad
   // split-view, instead of capturing the window size once at module load.
@@ -307,6 +320,22 @@ export default function App() {
     }
   }, [hapticEnabled]);
 
+  // Cancel any in-flight match-resolution / level-up-toast timeouts. Called
+  // when a run ends (endGame) or a new run starts (startGame) so a pending
+  // callback can never fire against a run it doesn't belong to. Safe to call
+  // from inside one of those very callbacks — each nulls its own ref before
+  // doing work, so clearing finds nothing to cancel for the live timer.
+  const clearPendingTimers = useCallback(() => {
+    if (resolutionTimerRef.current) {
+      clearTimeout(resolutionTimerRef.current);
+      resolutionTimerRef.current = null;
+    }
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
+
   // Timer effect. 9.8: paused while a match is being evaluated so a player
   // who taps the last pair just before time-out can't be robbed of credit by
   // the 600ms resolution delay racing the 1s timer tick. Phase 4: a `null`
@@ -356,6 +385,7 @@ export default function App() {
   const startGame = (modeId) => {
     const id = isValidMode(modeId) ? modeId : mode;
     const cfg = MODES[id];
+    clearPendingTimers(); // cancel any timers left over from a prior run
     setMode(id);
     setGameState('playing');
     setLevel(1);
@@ -390,6 +420,10 @@ export default function App() {
   // referencing endGame from nextLevel's deps requires endGame to already
   // be in scope.
   const endGame = useCallback((outcome = 'timeout', explicitLevelReached = null) => {
+    // Cancel any pending match-resolution / toast timeouts so a stale
+    // callback can't mutate state after the run is over (e.g. Pause → Quit
+    // mid-resolution bumping the Game Over level or flipping the outcome).
+    clearPendingTimers();
     setGameState('gameOver');
     setGameOutcome(outcome);
     triggerHaptic('error');
@@ -440,7 +474,20 @@ export default function App() {
       persistModeStats(next);
     }
     setIsNewHighScore(newHighScore);
-  }, [mode, levelReached, modeStats, totalMismatches, triggerHaptic]);
+
+    // Native rating prompt: only after a genuinely positive moment — an
+    // Easy-mode completion, or a new high score reached on a real run-end
+    // (timeout / mistake-out are the *win* conditions in the endless modes).
+    // Never after a give-up, even if that run happened to set a high score.
+    // Delayed slightly so the Game Over screen and its celebration render
+    // first, then the OS dialog (if eligible) layers on top. game/rating.js
+    // owns all the gating; this is fire-and-forget.
+    const positiveOutcome =
+      outcome === 'completed' || (newHighScore && outcome !== 'gaveUp');
+    if (positiveOutcome) {
+      setTimeout(() => { maybeRequestReview(); }, 1200);
+    }
+  }, [mode, levelReached, modeStats, totalMismatches, triggerHaptic, clearPendingTimers]);
 
   // Advance to the next level. Called when all pairs in the current level
   // are matched. Phase 6.4: now records `levelReached` correctly — the
@@ -509,7 +556,10 @@ export default function App() {
       const card1 = cards.find(card => card.id === newFlippedCards[0]);
       const card2 = cards.find(card => card.id === newFlippedCards[1]);
 
-      setTimeout(() => {
+      resolutionTimerRef.current = setTimeout(() => {
+        // This timer is now running; clear its handle so a concurrent
+        // endGame/startGame doesn't try to cancel an already-fired timeout.
+        resolutionTimerRef.current = null;
         if (card1.symbol === card2.symbol) {
           const updatedCards = cards.map(card => ({
             ...card,
@@ -540,7 +590,8 @@ export default function App() {
               setLevelUpToastLevel(level + 1);
               // Hold isProcessingMatch true through the toast so the
               // timer doesn't tick to zero during celebration.
-              setTimeout(() => {
+              toastTimerRef.current = setTimeout(() => {
+                toastTimerRef.current = null;
                 setLevelUpToastLevel(null);
                 nextLevel();
                 setIsProcessingMatch(false);

@@ -40,6 +40,9 @@ export const STORAGE_KEYS = {
   // Phase 8 — the legacy `highScores` key is no longer written, kept
   // only so the v3 migration can seed normal.bestLevel for 1.x users.
   modeStats: 'matchMaestro:modeStats',
+  // Native rating-prompt bookkeeping: { positiveCount, lastPromptTs }.
+  // Drives the gate in game/rating.js. Local-only, never migrated.
+  rating: 'matchMaestro:rating',
 };
 
 // Legacy 1.x keys. Read once on first launch by migrateLegacyStorage(),
